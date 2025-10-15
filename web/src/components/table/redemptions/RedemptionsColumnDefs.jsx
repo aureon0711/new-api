@@ -97,6 +97,17 @@ export const getRedemptionsColumns = ({
       dataIndex: 'name',
     },
     {
+      title: t('类型'),
+      dataIndex: 'is_gift_code',
+      render: (text, record) => {
+        return (
+          <Tag color={text ? 'purple' : 'blue'} shape='circle'>
+            {text ? t('礼品码') : t('兑换码')}
+          </Tag>
+        );
+      },
+    },
+    {
       title: t('状态'),
       dataIndex: 'status',
       key: 'status',
@@ -132,10 +143,34 @@ export const getRedemptionsColumns = ({
       },
     },
     {
-      title: t('兑换人ID'),
-      dataIndex: 'used_user_id',
-      render: (text) => {
-        return <div>{text === 0 ? t('无') : text}</div>;
+      title: t('使用情况'),
+      dataIndex: 'used_count',
+      render: (text, record) => {
+        if (record.is_gift_code) {
+          // 礼品码显示使用情况
+          let usedUsers = 0;
+          if (record.used_user_ids) {
+            try {
+              const usedUserIdsObj = JSON.parse(record.used_user_ids);
+              usedUsers = Object.keys(usedUserIdsObj).length;
+            } catch (e) {
+              usedUsers = 0;
+            }
+          }
+          return (
+            <div>
+              <Tag color='cyan' shape='circle'>
+                {t('人数')}: {usedUsers}/{record.max_users}
+              </Tag>
+              <Tag color='green' shape='circle'>
+                {t('总次数')}: {text || 0}
+              </Tag>
+            </div>
+          );
+        } else {
+          // 普通兑换码显示兑换人ID
+          return <div>{record.used_user_id === 0 ? t('无') : t('用户ID: ') + record.used_user_id}</div>;
+        }
       },
     },
     {

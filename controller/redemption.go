@@ -90,6 +90,23 @@ func AddRedemption(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
+	// 验证礼品码参数
+	if redemption.IsGiftCode {
+		if redemption.MaxUsers <= 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "礼品码使用人数必须大于0",
+			})
+			return
+		}
+		if redemption.MaxUses <= 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "礼品码使用次数必须大于0",
+			})
+			return
+		}
+	}
 	var keys []string
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()
@@ -100,6 +117,9 @@ func AddRedemption(c *gin.Context) {
 			CreatedTime: common.GetTimestamp(),
 			Quota:       redemption.Quota,
 			ExpiredTime: redemption.ExpiredTime,
+			IsGiftCode:  redemption.IsGiftCode,
+			MaxUsers:    redemption.MaxUsers,
+			MaxUses:     redemption.MaxUses,
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
@@ -156,6 +176,9 @@ func UpdateRedemption(c *gin.Context) {
 		cleanRedemption.Name = redemption.Name
 		cleanRedemption.Quota = redemption.Quota
 		cleanRedemption.ExpiredTime = redemption.ExpiredTime
+		cleanRedemption.IsGiftCode = redemption.IsGiftCode
+		cleanRedemption.MaxUsers = redemption.MaxUsers
+		cleanRedemption.MaxUses = redemption.MaxUses
 	}
 	if statusOnly != "" {
 		cleanRedemption.Status = redemption.Status

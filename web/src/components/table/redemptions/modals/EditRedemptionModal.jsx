@@ -63,6 +63,9 @@ const EditRedemptionModal = (props) => {
     quota: 100000,
     count: 1,
     expired_time: null,
+    is_gift_code: false,
+    max_users: 10,
+    max_uses: 10,
   });
 
   const handleCancel = () => {
@@ -261,6 +264,19 @@ const EditRedemptionModal = (props) => {
                         showClear
                       />
                     </Col>
+                    {!isEdit && (
+                      <Col span={24}>
+                        <Form.RadioGroup
+                          field='is_gift_code'
+                          label={t('兑换码类型')}
+                          type='button'
+                          buttonSize='middle'
+                        >
+                          <Form.Radio value={false}>{t('兑换码')}</Form.Radio>
+                          <Form.Radio value={true}>{t('礼品码')}</Form.Radio>
+                        </Form.RadioGroup>
+                      </Col>
+                    )}
                   </Row>
                 </Card>
 
@@ -338,6 +354,54 @@ const EditRedemptionModal = (props) => {
                           showClear
                         />
                       </Col>
+                    )}
+                    {!isEdit && values.is_gift_code && (
+                      <>
+                        <Col span={12}>
+                          <Form.InputNumber
+                            field='max_users'
+                            label={t('使用人数')}
+                            min={1}
+                            rules={[
+                              { required: true, message: t('请输入使用人数') },
+                              {
+                                validator: (rule, v) => {
+                                  const num = parseInt(v, 10);
+                                  return num > 0
+                                    ? Promise.resolve()
+                                    : Promise.reject(t('使用人数必须大于0'));
+                                },
+                              },
+                            ]}
+                            style={{ width: '100%' }}
+                            placeholder={t('该礼品码可供多少人使用')}
+                            extraText={t('限制可以使用该礼品码的用户数量')}
+                            showClear
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Form.InputNumber
+                            field='max_uses'
+                            label={t('使用次数')}
+                            min={1}
+                            rules={[
+                              { required: true, message: t('请输入使用次数') },
+                              {
+                                validator: (rule, v) => {
+                                  const num = parseInt(v, 10);
+                                  return num > 0
+                                    ? Promise.resolve()
+                                    : Promise.reject(t('使用次数必须大于0'));
+                                },
+                              },
+                            ]}
+                            style={{ width: '100%' }}
+                            placeholder={t('每个用户可使用多少次')}
+                            extraText={t('每个用户可以使用该礼品码的次数')}
+                            showClear
+                          />
+                        </Col>
+                      </>
                     )}
                   </Row>
                 </Card>
