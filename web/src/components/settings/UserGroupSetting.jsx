@@ -1,3 +1,4 @@
+
 /*
 Copyright (C) 2025 QuantumNous
 
@@ -31,10 +32,18 @@ import {
   Popconfirm,
   Card,
   Spin,
+  Checkbox,
+  CheckboxGroup,
+  Typography,
+  Divider,
+  Row,
+  Col,
 } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import { API, showError, showSuccess } from '../../helpers';
 import { IconEdit, IconDelete, IconPlus, IconSearch } from '@douyinfe/semi-icons';
+
+const { Text } = Typography;
 
 const UserGroupSetting = () => {
   const { t } = useTranslation();
@@ -45,6 +54,8 @@ const UserGroupSetting = () => {
   const [pagination, setPagination] = useState({ currentPage: 1, pageSize: 10, total: 0 });
   const [searchKeyword, setSearchKeyword] = useState('');
   const [formApi, setFormApi] = useState(null);
+  const [enableGroups, setEnableGroups] = useState([]);
+  const [selectedEnableGroups, setSelectedEnableGroups] = useState([]);
 
   // 加载用户组列表
   const loadUserGroups = async (page = 1, size = 10, keyword = '') => {
@@ -68,23 +79,67 @@ const UserGroupSetting = () => {
     }
   };
 
+  // 加载所有可用的模型分组
+  const loadEnableGroups = async () => {
+    try {
+      const res = await API.get('/api/enable_group');
+      if (res.data.success) {
+        setEnableGroups(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load enable groups:', error);
+    }
+  };
+
   useEffect(() => {
     loadUserGroups();
+    loadEnableGroups();
   }, []);
 
   // 打开编辑/创建弹窗
-  const handleEdit = (record) => {
+  const handleEdit = async (record) => {
     setEditingGroup(record);
     setModalVisible(true);
     
-    if (formApi && record) {
-      formApi.setValues({
-        name: record.name,
-        display_name: record.display_name,
-        description: record.description,
-        config: record.config || '',
-        status: record.status,
-      });
+    if (record) {
+      // 加载用户组的模型权限
+      try {
+        const res = await API.get(`/api/user_group/${record.id}/enable_groups`);
+        if (res.data.success && res.data.data) {
+          setSelectedEnableGroups(res.data.data);
+        } else {
+          setSelectedEnableGroups([]);
+        }
+      } catch (error) {
+        setSelectedEnableGroups([]);
+      }
+
+      if (formApi) {
+        // 解析config中的登录方式配置
+        let loginMethods = [];
+        try {
+          if (record.config) {
+            const config = JSON.parse(record.config);
+            if (config.auto_assign_rules && Array.isArray(config.auto_assign_rules)) {
+              loginMethods = config.auto_assign_rules
+                .filter(rule => rule.enabled)
+                .map(rule => rule.type);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse config:', e);
+        }
+
+        formApi.setValues({
+          name: record.name,
+          display_name: record.display_name,
+          description: record.description,
+          login_methods: loginMethods,
+          status: record.status,
+        });
+      }
+    } else {
+      setSelectedEnableGroups([]);
     }
   };
 
@@ -92,6 +147,7 @@ const UserGroupSetting = () => {
   const handleCloseModal = () => {
     setModalVisible(false);
     setEditingGroup(null);
+    setSelectedEnableGroups([]);
     if (formApi) {
       formApi.reset();
     }
@@ -100,24 +156,50 @@ const UserGroupSetting = () => {
   // 提交表单
   const handleSubmit = async (values) => {
     try {
+      // 构建config对象
+      const config = {
+        auto_assign_rules: (values.login_methods || []).map(type => ({
+          type: type,
+          enabled: true,
+          priority: 1,
+        })),
+      };
+
       const payload = {
         name: values.name,
         display_name: values.display_name,
         description: values.description || '',
-        config: values.config || '',
+        config: JSON.stringify(config),
         status: values.status || 1,
       };
 
       let res;
+      let groupId;
+      
       if (editingGroup) {
         payload.id = editingGroup.id;
+        groupId = editingGroup.id;
         res = await API.put('/api/user_group', payload);
       } else {
         res = await API.post('/api/user_group', payload);
+        if (res.data.success && res.data.data) {
+          groupId = res.data.data.id;
+        }
       }
 
       const { success, message } = res.data;
       if (success) {
+        // 更新模型权限
+        if (groupId && selectedEnableGroups.length > 0) {
+          try {
+            await API.put(`/api/user_group/${groupId}/enable_groups`, {
+              enable_groups: selectedEnableGroups,
+            });
+          } catch (error) {
+            console.error('Failed to update enable groups:', error);
+          }
+        }
+        
         showSuccess(editingGroup ? t('更新成功') : t('创建成功'));
         handleCloseModal();
         loadUserGroups(pagination.currentPage, pagination.pageSize, searchKeyword);
@@ -125,6 +207,7 @@ const UserGroupSetting = () => {
         showError(message || t('操作失败'));
       }
     } catch (error) {
+      console.error('Submit error:', error);
       showError(t('操作失败'));
     }
   };
@@ -156,6 +239,17 @@ const UserGroupSetting = () => {
   const handlePageChange = (page) => {
     loadUserGroups(page, pagination.pageSize, searchKeyword);
   };
+
+  // 登录方式选项
+  const loginMethodOptions = [
+    { label: t('GitHub登录'), value: 'github' },
+    { label: t('邮箱登录'), value: 'email' },
+    { label: t('Discord登录'), value: 'discord' },
+    { label: t('Telegram登录'), value: 'telegram' },
+    { label: t('微信登录'), value: 'wechat' },
+    { label: t('OIDC登录'), value: 'oidc' },
+    { label: t('LinuxDo登录'), value: 'linuxdo' },
+  ];
 
   // 表格列定义
   const columns = [
@@ -256,14 +350,14 @@ const UserGroupSetting = () => {
         visible={modalVisible}
         onCancel={handleCloseModal}
         footer={null}
-        width={700}
+        width={800}
       >
         <Form 
           getFormApi={(api) => setFormApi(api)} 
           onSubmit={handleSubmit} 
           labelPosition="left" 
           labelWidth={120}
-          initValues={{ status: 1 }}
+          initValues={{ status: 1, login_methods: [] }}
         >
           <Form.Input 
             field="name" 
@@ -284,13 +378,91 @@ const UserGroupSetting = () => {
             placeholder={t('用户组的详细描述')}
             rows={3}
           />
-          <Form.TextArea 
-            field="config" 
-            label={t('JSON配置')} 
-            placeholder={t('例：{"auto_assign_rules":[{"type":"github","enabled":true}]}')}
-            rows={10}
-            extraText={t('用于配置自动分配规则等，JSON格式')}
-          />
+          
+          <Divider margin="24px" />
+          
+          <div style={{ marginBottom: 16 }}>
+            <Text strong style={{ fontSize: '14px' }}>{t('注册/登录方式配置')}</Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {t('选择使用该登录方式注册的用户自动分配到此用户组')}
+            </Text>
+          </div>
+          
+          <Form.CheckboxGroup 
+            field="login_methods"
+            direction="vertical"
+          >
+            {loginMethodOptions.map(option => (
+              <Checkbox key={option.value} value={option.value}>
+                {option.label}
+              </Checkbox>
+            ))}
+          </Form.CheckboxGroup>
+
+          <Divider margin="24px" />
+
+          <div style={{ marginBottom: 16 }}>
+            <Text strong style={{ fontSize: '14px' }}>{t('模型权限配置')}</Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {t('选择该用户组可以访问的模型分组（来自分组与模型定价设置）')}
+            </Text>
+          </div>
+
+          {enableGroups.length === 0 ? (
+            <Card style={{ textAlign: 'center', padding: '20px', marginBottom: 16 }}>
+              <Text type="tertiary">
+                {t('暂无可用的模型分组。请先在"分组与模型定价设置"中配置模型分组。')}
+              </Text>
+            </Card>
+          ) : (
+            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: 16 }}>
+              <Row gutter={[12, 12]}>
+                {enableGroups.map(group => (
+                  <Col span={12} key={group}>
+                    <Card 
+                      style={{ 
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        border: selectedEnableGroups.includes(group) 
+                          ? '2px solid var(--semi-color-primary)' 
+                          : '1px solid var(--semi-color-border)'
+                      }}
+                      onClick={() => {
+                        if (selectedEnableGroups.includes(group)) {
+                          setSelectedEnableGroups(selectedEnableGroups.filter(g => g !== group));
+                        } else {
+                          setSelectedEnableGroups([...selectedEnableGroups, group]);
+                        }
+                      }}
+                    >
+                      <Checkbox 
+                        checked={selectedEnableGroups.includes(group)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedEnableGroups([...selectedEnableGroups, group]);
+                          } else {
+                            setSelectedEnableGroups(selectedEnableGroups.filter(g => g !== group));
+                          }
+                        }}
+                      >
+                        <div>
+                          <Text strong>{group}</Text>
+                          <Tag size="small" color="blue" style={{ marginLeft: '8px' }}>
+                            {t('模型分组')}
+                          </Tag>
+                        </div>
+                      </Checkbox>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          )}
+
+          <Divider margin="24px" />
+
           <Form.RadioGroup 
             field="status" 
             label={t('状态')} 
