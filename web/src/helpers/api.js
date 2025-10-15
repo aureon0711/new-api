@@ -263,6 +263,14 @@ export async function onLinuxDOOAuthClicked(linuxdo_client_id) {
   );
 }
 
+export async function onDiscordOAuthClicked(discord_client_id) {
+  const state = await getOAuthState();
+  if (!state) return;
+  window.open(
+    `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${discord_client_id}&state=${state}&scope=identify%20email`,
+  );
+}
+
 let channelModels = undefined;
 export async function loadChannelModels() {
   const res = await API.get('/api/models');
