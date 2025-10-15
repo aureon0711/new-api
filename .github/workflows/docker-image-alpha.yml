@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: "reason"
+        description: 'reason'
         required: false
 
 jobs:
@@ -42,9 +42,6 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Publishing version: $VERSION for ${{ matrix.arch }}"
 
-      - name: Normalize GHCR repository
-        run: echo "GHCR_REPOSITORY=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -54,32 +51,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract metadata (labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            calciumion/new-api
-            ghcr.io/${{ env.GHCR_REPOSITORY }}
+            aureon1618/new-api
 
-      - name: Build & push single-arch (to both registries)
+      - name: Build & push single-arch (to Docker Hub)
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            calciumion/new-api:alpha-${{ matrix.arch }}
-            calciumion/new-api:${{ steps.version.outputs.value }}-${{ matrix.arch }}
-            ghcr.io/${{ env.GHCR_REPOSITORY }}:alpha-${{ matrix.arch }}
-            ghcr.io/${{ env.GHCR_REPOSITORY }}:${{ steps.version.outputs.value }}-${{ matrix.arch }}
+            aureon1618/new-api:alpha-${{ matrix.arch }}
+            aureon1618/new-api:${{ steps.version.outputs.value }}-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -87,7 +74,7 @@ jobs:
           sbom: false
 
   create_manifests:
-    name: Create multi-arch manifests (Docker Hub + GHCR)
+    name: Create multi-arch manifests (Docker Hub)
     needs: [build_single_arch]
     runs-on: ubuntu-latest
     permissions:
@@ -98,9 +85,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Normalize GHCR repository
-        run: echo "GHCR_REPOSITORY=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Determine alpha version
         id: version
@@ -118,34 +102,13 @@ jobs:
       - name: Create & push manifest (Docker Hub - alpha)
         run: |
           docker buildx imagetools create \
-            -t calciumion/new-api:alpha \
-            calciumion/new-api:alpha-amd64 \
-            calciumion/new-api:alpha-arm64
+            -t aureon1618/new-api:alpha \
+            aureon1618/new-api:alpha-amd64 \
+            aureon1618/new-api:alpha-arm64
 
       - name: Create & push manifest (Docker Hub - versioned alpha)
         run: |
           docker buildx imagetools create \
-            -t calciumion/new-api:${VERSION} \
-            calciumion/new-api:${VERSION}-amd64 \
-            calciumion/new-api:${VERSION}-arm64
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create & push manifest (GHCR - alpha)
-        run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${GHCR_REPOSITORY}:alpha \
-            ghcr.io/${GHCR_REPOSITORY}:alpha-amd64 \
-            ghcr.io/${GHCR_REPOSITORY}:alpha-arm64
-
-      - name: Create & push manifest (GHCR - versioned alpha)
-        run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${GHCR_REPOSITORY}:${VERSION} \
-            ghcr.io/${GHCR_REPOSITORY}:${VERSION}-amd64 \
-            ghcr.io/${GHCR_REPOSITORY}:${VERSION}-arm64
+            -t aureon1618/new-api:${VERSION} \
+            aureon1618/new-api:${VERSION}-amd64 \
+            aureon1618/new-api:${VERSION}-arm64
