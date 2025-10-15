@@ -32,6 +32,8 @@ import {
   MessageSquare,
   Palette,
   CreditCard,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 
 import SystemSetting from '../../components/settings/SystemSetting';
@@ -46,6 +48,8 @@ import ChatsSetting from '../../components/settings/ChatsSetting';
 import DrawingSetting from '../../components/settings/DrawingSetting';
 import PaymentSetting from '../../components/settings/PaymentSetting';
 import CheckinSetting from '../../components/settings/CheckinSetting';
+import UserGroupSetting from '../../components/settings/UserGroupSetting';
+import ModelPermissionSetting from '../../components/settings/ModelPermissionSetting';
 
 const Setting = () => {
   const { t } = useTranslation();
@@ -144,6 +148,26 @@ const Setting = () => {
       ),
       content: <ModelSetting />,
       itemKey: 'models',
+    });
+    panes.push({
+      tab: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Users size={18} />
+          {t('用户组管理')}
+        </span>
+      ),
+      content: <UserGroupSetting />,
+      itemKey: 'user_groups',
+    });
+    panes.push({
+      tab: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <ShieldCheck size={18} />
+          {t('模型权限')}
+        </span>
+      ),
+      content: <ModelPermissionSetting />,
+      itemKey: 'model_permissions',
     });
     panes.push({
       tab: (

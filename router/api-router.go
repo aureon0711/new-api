@@ -272,5 +272,32 @@ func SetApiRouter(router *gin.Engine) {
 			checkinAdminRoute.PUT("/config", controller.UpdateCheckinConfig)
 			checkinAdminRoute.GET("/history/all", controller.GetAllCheckinHistory)
 		}
+
+		// 用户组管理路由
+		userGroupRoute := apiRouter.Group("/user_group")
+		userGroupRoute.Use(middleware.RootAuth())
+		{
+			userGroupRoute.GET("/", controller.GetAllUserGroups)
+			userGroupRoute.GET("/search", controller.SearchUserGroups)
+			userGroupRoute.GET("/:id", controller.GetUserGroup)
+			userGroupRoute.POST("/", controller.CreateUserGroup)
+			userGroupRoute.PUT("/", controller.UpdateUserGroup)
+			userGroupRoute.DELETE("/:id", controller.DeleteUserGroup)
+			userGroupRoute.GET("/:id/permissions", controller.GetUserGroupModelPermissions)
+			userGroupRoute.PUT("/:id/permissions", controller.UpdateUserGroupModelPermissions)
+			userGroupRoute.GET("/:id/model_groups", controller.GetModelGroupsByUserGroup)
+		}
+
+		// 模型分组管理路由
+		modelGroupRoute := apiRouter.Group("/model_group")
+		modelGroupRoute.Use(middleware.RootAuth())
+		{
+			modelGroupRoute.GET("/", controller.GetAllModelGroups)
+			modelGroupRoute.GET("/search", controller.SearchModelGroups)
+			modelGroupRoute.GET("/:id", controller.GetModelGroup)
+			modelGroupRoute.POST("/", controller.CreateModelGroup)
+			modelGroupRoute.PUT("/", controller.UpdateModelGroup)
+			modelGroupRoute.DELETE("/:id", controller.DeleteModelGroup)
+		}
 	}
 }
