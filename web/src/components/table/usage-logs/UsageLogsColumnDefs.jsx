@@ -23,7 +23,6 @@ import {
   Space,
   Tag,
   Tooltip,
-  Popover,
   Typography,
 } from '@douyinfe/semi-ui';
 import {
@@ -40,8 +39,6 @@ import {
   renderClaudeModelPrice,
   renderModelPrice,
 } from '../../../helpers';
-import { IconHelpCircle } from '@douyinfe/semi-icons';
-import { Route } from 'lucide-react';
 
 const colors = [
   'amber',
@@ -173,66 +170,11 @@ function renderFirstUseTime(type, t) {
 }
 
 function renderModelName(record, copyText, t) {
-  let other = getLogOther(record.other);
-  let modelMapped =
-    other?.is_model_mapped &&
-    other?.upstream_model_name &&
-    other?.upstream_model_name !== '';
-  if (!modelMapped) {
-    return renderModelTag(record.model_name, {
-      onClick: (event) => {
-        copyText(event, record.model_name).then((r) => {});
-      },
-    });
-  } else {
-    return (
-      <>
-        <Space vertical align={'start'}>
-          <Popover
-            content={
-              <div style={{ padding: 10 }}>
-                <Space vertical align={'start'}>
-                  <div className='flex items-center'>
-                    <Typography.Text strong style={{ marginRight: 8 }}>
-                      {t('请求并计费模型')}:
-                    </Typography.Text>
-                    {renderModelTag(record.model_name, {
-                      onClick: (event) => {
-                        copyText(event, record.model_name).then((r) => {});
-                      },
-                    })}
-                  </div>
-                  <div className='flex items-center'>
-                    <Typography.Text strong style={{ marginRight: 8 }}>
-                      {t('实际模型')}:
-                    </Typography.Text>
-                    {renderModelTag(other.upstream_model_name, {
-                      onClick: (event) => {
-                        copyText(event, other.upstream_model_name).then(
-                          (r) => {},
-                        );
-                      },
-                    })}
-                  </div>
-                </Space>
-              </div>
-            }
-          >
-            {renderModelTag(record.model_name, {
-              onClick: (event) => {
-                copyText(event, record.model_name).then((r) => {});
-              },
-              suffixIcon: (
-                <Route
-                  style={{ width: '0.9em', height: '0.9em', opacity: 0.75 }}
-                />
-              ),
-            })}
-          </Popover>
-        </Space>
-      </>
-    );
-  }
+  return renderModelTag(record.model_name, {
+    onClick: (event) => {
+      copyText(event, record.model_name).then((r) => {});
+    },
+  });
 }
 
 export const getLogsColumns = ({
@@ -247,44 +189,6 @@ export const getLogsColumns = ({
       key: COLUMN_KEYS.TIME,
       title: t('时间'),
       dataIndex: 'timestamp2string',
-    },
-    {
-      key: COLUMN_KEYS.CHANNEL,
-      title: t('渠道'),
-      dataIndex: 'channel',
-      render: (text, record, index) => {
-        let isMultiKey = false;
-        let multiKeyIndex = -1;
-        let other = getLogOther(record.other);
-        if (other?.admin_info) {
-          let adminInfo = other.admin_info;
-          if (adminInfo?.is_multi_key) {
-            isMultiKey = true;
-            multiKeyIndex = adminInfo.multi_key_index;
-          }
-        }
-
-        return isAdminUser &&
-          (record.type === 0 || record.type === 2 || record.type === 5) ? (
-          <Space>
-            <Tooltip content={record.channel_name || t('未知渠道')}>
-              <span>
-                <Tag
-                  color={colors[parseInt(text) % colors.length]}
-                  shape='circle'
-                >
-                  {text}
-                </Tag>
-              </span>
-            </Tooltip>
-            {isMultiKey && (
-              <Tag color='white' shape='circle'>
-                {multiKeyIndex}
-              </Tag>
-            )}
-          </Space>
-        ) : null;
-      },
     },
     {
       key: COLUMN_KEYS.USERNAME,
@@ -456,18 +360,7 @@ export const getLogsColumns = ({
     },
     {
       key: COLUMN_KEYS.IP,
-      title: (
-        <div className='flex items-center gap-1'>
-          {t('IP')}
-          <Tooltip
-            content={t(
-              '只有当用户设置开启IP记录时，才会进行请求和错误类型日志的IP记录',
-            )}
-          >
-            <IconHelpCircle className='text-gray-400 cursor-help' />
-          </Tooltip>
-        </div>
-      ),
+      title: t('IP'),
       dataIndex: 'ip',
       render: (text, record, index) => {
         return (record.type === 2 || record.type === 5) && text ? (
@@ -487,35 +380,6 @@ export const getLogsColumns = ({
         ) : (
           <></>
         );
-      },
-    },
-    {
-      key: COLUMN_KEYS.RETRY,
-      title: t('重试'),
-      dataIndex: 'retry',
-      render: (text, record, index) => {
-        if (!(record.type === 2 || record.type === 5)) {
-          return <></>;
-        }
-        let content = t('渠道') + `：${record.channel}`;
-        if (record.other !== '') {
-          let other = JSON.parse(record.other);
-          if (other === null) {
-            return <></>;
-          }
-          if (other.admin_info !== undefined) {
-            if (
-              other.admin_info.use_channel !== null &&
-              other.admin_info.use_channel !== undefined &&
-              other.admin_info.use_channel !== ''
-            ) {
-              let useChannel = other.admin_info.use_channel;
-              let useChannelStr = useChannel.join('->');
-              content = t('渠道') + `：${useChannelStr}`;
-            }
-          }
-        }
-        return isAdminUser ? <div>{content}</div> : <></>;
       },
     },
     {

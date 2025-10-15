@@ -56,10 +56,7 @@ import {
 } from '../../../../helpers';
 import ModelSelectModal from './ModelSelectModal';
 import JSONEditor from '../../../common/ui/JSONEditor';
-import SecureVerificationModal from '../../../common/modals/SecureVerificationModal';
 import ChannelKeyDisplay from '../../../common/ui/ChannelKeyDisplay';
-import { useSecureVerification } from '../../../../hooks/common/useSecureVerification';
-import { createApiCalls } from '../../../../services/secureVerification';
 import {
   IconSave,
   IconClose,
@@ -194,11 +191,6 @@ const EditChannelModal = (props) => {
     keyData: '',
   });
 
-  // 专门的2FA验证状态（用于TwoFactorAuthModal）
-  const [show2FAVerifyModal, setShow2FAVerifyModal] = useState(false);
-  const [verifyCode, setVerifyCode] = useState('');
-  const [verifyLoading, setVerifyLoading] = useState(false);
-
   // 表单块导航相关状态
   const formSectionRefs = useRef({
     basicInfo: null,
@@ -217,54 +209,12 @@ const EditChannelModal = (props) => {
   ];
   const formContainerRef = useRef(null);
 
-  // 2FA状态更新辅助函数
-  const updateTwoFAState = (updates) => {
-    setTwoFAState((prev) => ({ ...prev, ...updates }));
-  };
-  // 使用通用安全验证 Hook
-  const {
-    isModalVisible,
-    verificationMethods,
-    verificationState,
-    withVerification,
-    executeVerification,
-    cancelVerification,
-    setVerificationCode,
-    switchVerificationMethod,
-  } = useSecureVerification({
-    onSuccess: (result) => {
-      // 验证成功后显示密钥
-      console.log('Verification success, result:', result);
-      if (result && result.success && result.data?.key) {
-        showSuccess(t('密钥获取成功'));
-        setKeyDisplayState({
-          showModal: true,
-          keyData: result.data.key,
-        });
-      } else if (result && result.key) {
-        // 直接返回了 key（没有包装在 data 中）
-        showSuccess(t('密钥获取成功'));
-        setKeyDisplayState({
-          showModal: true,
-          keyData: result.key,
-        });
-      }
-    },
-  });
-
   // 重置密钥显示状态
   const resetKeyDisplayState = () => {
     setKeyDisplayState({
       showModal: false,
       keyData: '',
     });
-  };
-
-  // 重置2FA验证状态
-  const reset2FAVerifyState = () => {
-    setShow2FAVerifyModal(false);
-    setVerifyCode('');
-    setVerifyLoading(false);
   };
 
   // 表单导航功能
@@ -695,26 +645,20 @@ const EditChannelModal = (props) => {
     }
   };
 
-  // 查看渠道密钥（透明验证）
+  // 查看渠道密钥（直接显示，无需验证）
   const handleShow2FAModal = async () => {
     try {
-      // 使用 withVerification 包装，会自动处理需要验证的情况
-      const result = await withVerification(
-        createApiCalls.viewChannelKey(channelId),
-        {
-          title: t('查看渠道密钥'),
-          description: t('为了保护账户安全，请验证您的身份。'),
-          preferredMethod: 'passkey', // 优先使用 Passkey
-        },
-      );
-
-      // 如果直接返回了结果（已验证），显示密钥
-      if (result && result.success && result.data?.key) {
+      const res = await API.get(`/api/channel/${channelId}/key`);
+      const { success, message, data } = res.data;
+      
+      if (success && data?.key) {
         showSuccess(t('密钥获取成功'));
         setKeyDisplayState({
           showModal: true,
-          keyData: result.data.key,
+          keyData: data.key,
         });
+      } else {
+        showError(message || t('获取密钥失败'));
       }
     } catch (error) {
       console.error('Failed to view channel key:', error);
@@ -1609,7 +1553,7 @@ const EditChannelModal = (props) => {
                                   theme='outline'
                                   onClick={handleShow2FAModal}
                                 >
-                                  {t('查看密钥')}
+                                  {t('显示密钥')}
                                 </Button>
                               )}
                               {batchExtra}
@@ -1731,7 +1675,7 @@ const EditChannelModal = (props) => {
                                         theme='outline'
                                         onClick={handleShow2FAModal}
                                       >
-                                        {t('查看密钥')}
+                                        {t('显示密钥')}
                                       </Button>
                                     )}
                                     {batchExtra}
@@ -1810,7 +1754,7 @@ const EditChannelModal = (props) => {
                                     theme='outline'
                                     onClick={handleShow2FAModal}
                                   >
-                                    {t('查看密钥')}
+                                    {t('显示密钥')}
                                   </Button>
                                 )}
                                 {batchExtra}
@@ -1975,29 +1919,7 @@ const EditChannelModal = (props) => {
                         </div>
                       </div>
 
-                      {inputs.type === 40 && (
-                        <Banner
-                          type='info'
-                          description={
-                            <div>
-                              <Text strong>{t('邀请链接')}:</Text>
-                              <Text
-                                link
-                                underline
-                                className='ml-2 cursor-pointer'
-                                onClick={() =>
-                                  window.open(
-                                    'https://cloud.siliconflow.cn/i/hij0YNTZ',
-                                  )
-                                }
-                              >
-                                https://cloud.siliconflow.cn/i/hij0YNTZ
-                              </Text>
-                            </div>
-                          }
-                          className='!rounded-lg'
-                        />
-                      )}
+
 
                       {inputs.type === 3 && (
                         <>
@@ -2823,19 +2745,6 @@ const EditChannelModal = (props) => {
           onVisibleChange={(visible) => setIsModalOpenurl(visible)}
         />
       </SideSheet>
-      {/* 使用通用安全验证模态框 */}
-      <SecureVerificationModal
-        visible={isModalVisible}
-        verificationMethods={verificationMethods}
-        verificationState={verificationState}
-        onVerify={executeVerification}
-        onCancel={cancelVerification}
-        onCodeChange={setVerificationCode}
-        onMethodSwitch={switchVerificationMethod}
-        title={verificationState.title}
-        description={verificationState.description}
-      />
-
       {/* 使用ChannelKeyDisplay组件显示密钥 */}
       <Modal
         title={
