@@ -45,6 +45,7 @@ import RatioSetting from '../../components/settings/RatioSetting';
 import ChatsSetting from '../../components/settings/ChatsSetting';
 import DrawingSetting from '../../components/settings/DrawingSetting';
 import PaymentSetting from '../../components/settings/PaymentSetting';
+import CheckinSetting from '../../components/settings/CheckinSetting';
 
 const Setting = () => {
   const { t } = useTranslation();
@@ -103,6 +104,16 @@ const Setting = () => {
       ),
       content: <PaymentSetting />,
       itemKey: 'payment',
+    });
+    panes.push({
+      tab: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Calculator size={18} />
+          {t('每日签到')}
+        </span>
+      ),
+      content: <CheckinSetting />,
+      itemKey: 'checkin',
     });
     panes.push({
       tab: (

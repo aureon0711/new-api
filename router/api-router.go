@@ -253,5 +253,23 @@ func SetApiRouter(router *gin.Engine) {
 			modelsRoute.PUT("/", controller.UpdateModelMeta)
 			modelsRoute.DELETE("/:id", controller.DeleteModelMeta)
 		}
+	
+		// 签到相关路由
+		checkinRoute := apiRouter.Group("/checkin")
+		checkinRoute.Use(middleware.UserAuth())
+		{
+			checkinRoute.POST("/", controller.CheckinUser)
+			checkinRoute.GET("/status", controller.GetCheckinStatus)
+			checkinRoute.GET("/history", controller.GetCheckinHistory)
+		}
+	
+		// 管理员签到配置路由
+		checkinAdminRoute := apiRouter.Group("/checkin")
+		checkinAdminRoute.Use(middleware.AdminAuth())
+		{
+			checkinAdminRoute.GET("/config", controller.GetCheckinConfig)
+			checkinAdminRoute.PUT("/config", controller.UpdateCheckinConfig)
+			checkinAdminRoute.GET("/history/all", controller.GetAllCheckinHistory)
+		}
 	}
 }
