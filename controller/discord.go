@@ -46,9 +46,9 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 		"client_secret": common.DiscordClientSecret,
 		"code":          code,
 		"grant_type":    "authorization_code",
-		"redirect_uri":  system_setting.ServerAddress + "/api/oauth/discord",
+		"redirect_uri":  system_setting.ServerAddress + "/oauth/discord",
 	}
-	
+
 	jsonData, err := json.Marshal(values)
 	if err != nil {
 		return nil, err
@@ -58,20 +58,20 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	
+
 	client := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	
+
 	res, err := client.Do(req)
 	if err != nil {
 		common.SysLog(err.Error())
 		return nil, errors.New("无法连接至 Discord 服务器，请稍后重试！")
 	}
 	defer res.Body.Close()
-	
+
 	var oAuthResponse DiscordOAuthResponse
 	err = json.NewDecoder(res.Body).Decode(&oAuthResponse)
 	if err != nil {
@@ -83,26 +83,26 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oAuthResponse.AccessToken))
-	
+
 	res2, err := client.Do(req)
 	if err != nil {
 		common.SysLog(err.Error())
 		return nil, errors.New("无法连接至 Discord 服务器，请稍后重试！")
 	}
 	defer res2.Body.Close()
-	
+
 	var discordUser DiscordUser
 	err = json.NewDecoder(res2.Body).Decode(&discordUser)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if discordUser.ID == "" {
 		return nil, errors.New("返回值非法，用户字段为空，请稍后重试！")
 	}
-	
+
 	return &discordUser, nil
 }
 
@@ -116,7 +116,7 @@ func DiscordOAuth(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	username := session.Get("username")
 	if username != nil {
 		DiscordBind(c)
@@ -130,18 +130,18 @@ func DiscordOAuth(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	code := c.Query("code")
 	discordUser, err := getDiscordUserInfoByCode(code)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	
+
 	user := model.User{
 		DiscordId: discordUser.ID,
 	}
-	
+
 	// 检查 Discord ID 是否已被使用
 	if model.IsDiscordIdAlreadyTaken(user.DiscordId) {
 		// 根据 Discord ID 填充用户信息
@@ -153,7 +153,7 @@ func DiscordOAuth(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		// 检查用户是否已被删除
 		if user.Id == 0 {
 			c.JSON(http.StatusOK, gin.H{
@@ -166,7 +166,7 @@ func DiscordOAuth(c *gin.Context) {
 		// 如果 Discord ID 未被使用，创建新用户
 		if common.RegisterEnabled {
 			user.Username = "discord_" + strconv.Itoa(model.GetMaxUserId()+1)
-			
+
 			// 优先使用 global_name，如果没有则使用 username
 			displayName := discordUser.GlobalName
 			if displayName == "" {
@@ -177,11 +177,11 @@ func DiscordOAuth(c *gin.Context) {
 			} else {
 				user.DisplayName = "Discord User"
 			}
-			
+
 			user.Email = discordUser.Email
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
-			
+
 			affCode := session.Get("aff")
 			inviterId := 0
 			if affCode != nil {
@@ -211,7 +211,7 @@ func DiscordOAuth(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	setupLogin(&user, c)
 }
 
@@ -223,18 +223,18 @@ func DiscordBind(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	code := c.Query("code")
 	discordUser, err := getDiscordUserInfoByCode(code)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	
+
 	user := model.User{
 		DiscordId: discordUser.ID,
 	}
-	
+
 	if model.IsDiscordIdAlreadyTaken(user.DiscordId) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -242,24 +242,24 @@ func DiscordBind(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	session := sessions.Default(c)
 	id := session.Get("id")
 	user.Id = id.(int)
-	
+
 	err = user.FillUserById()
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	
+
 	user.DiscordId = discordUser.ID
 	err = user.Update(false)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "bind",

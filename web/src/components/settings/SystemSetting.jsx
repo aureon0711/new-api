@@ -17,22 +17,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useRef } from 'react';
 import {
-  Button,
-  Form,
-  Row,
-  Col,
-  Typography,
-  Modal,
   Banner,
-  TagInput,
-  Spin,
+  Button,
   Card,
+  Col,
+  Form,
+  Modal,
   Radio,
-  Select,
+  Row,
+  Spin,
+  TagInput,
+  Typography
 } from '@douyinfe/semi-ui';
-const { Text } = Typography;
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   API,
   removeTrailingSlash,
@@ -40,8 +40,7 @@ import {
   showSuccess,
   toBoolean,
 } from '../../helpers';
-import axios from 'axios';
-import { useTranslation } from 'react-i18next';
+const { Text } = Typography;
 
 const SystemSetting = () => {
   const { t } = useTranslation();
@@ -1564,7 +1563,7 @@ const SystemSetting = () => {
                   <Text>{t('用以支持通过 Discord 进行登录注册')}</Text>
                   <Banner
                     type='info'
-                    description={`${t('Redirect URI 填')} ${inputs.ServerAddress ? inputs.ServerAddress : t('网站地址')}/api/oauth/discord`}
+                    description={`${t('Redirect URI 填')} ${inputs.ServerAddress ? inputs.ServerAddress : t('网站地址')}/oauth/discord`}
                     style={{ marginBottom: 20, marginTop: 16 }}
                   />
                   <Row

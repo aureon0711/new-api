@@ -266,8 +266,9 @@ export async function onLinuxDOOAuthClicked(linuxdo_client_id) {
 export async function onDiscordOAuthClicked(discord_client_id) {
   const state = await getOAuthState();
   if (!state) return;
+  const redirectUri = encodeURIComponent(`${window.location.origin}/oauth/discord`);
   window.open(
-    `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${discord_client_id}&state=${state}&scope=identify%20email`,
+    `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${discord_client_id}&state=${state}&scope=identify%20email&redirect_uri=${redirectUri}`,
   );
 }
 

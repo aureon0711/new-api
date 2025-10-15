@@ -17,57 +17,54 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
-  API,
-  showError,
-  showInfo,
-  showSuccess,
-  verifyJSON,
-} from '../../../../helpers';
-import { useIsMobile } from '../../../../hooks/common/useIsMobile';
+    IconBolt,
+    IconChevronDown,
+    IconChevronUp,
+    IconClose,
+    IconCode,
+    IconGlobe,
+    IconSave,
+    IconServer,
+    IconSetting,
+} from '@douyinfe/semi-icons';
+import {
+    Avatar,
+    Banner,
+    Button,
+    Card,
+    Checkbox,
+    Col,
+    Form,
+    Highlight,
+    ImagePreview,
+    Modal,
+    Row,
+    SideSheet,
+    Space,
+    Spin,
+    Tag,
+    Typography
+} from '@douyinfe/semi-ui';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CHANNEL_OPTIONS } from '../../../../constants';
 import {
-  SideSheet,
-  Space,
-  Spin,
-  Button,
-  Typography,
-  Checkbox,
-  Banner,
-  Modal,
-  ImagePreview,
-  Card,
-  Tag,
-  Avatar,
-  Form,
-  Row,
-  Col,
-  Highlight,
-  Input,
-} from '@douyinfe/semi-ui';
-import {
-  getChannelModels,
-  copy,
-  getChannelIcon,
-  getModelCategories,
-  selectFilter,
+    API,
+    copy,
+    getChannelIcon,
+    getChannelModels,
+    getModelCategories,
+    selectFilter,
+    showError,
+    showInfo,
+    showSuccess,
+    verifyJSON,
 } from '../../../../helpers';
-import ModelSelectModal from './ModelSelectModal';
-import JSONEditor from '../../../common/ui/JSONEditor';
+import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 import ChannelKeyDisplay from '../../../common/ui/ChannelKeyDisplay';
-import {
-  IconSave,
-  IconClose,
-  IconServer,
-  IconSetting,
-  IconCode,
-  IconGlobe,
-  IconBolt,
-  IconChevronUp,
-  IconChevronDown,
-} from '@douyinfe/semi-icons';
+import JSONEditor from '../../../common/ui/JSONEditor';
+import ModelSelectModal from './ModelSelectModal';
 
 const { Text, Title } = Typography;
 

@@ -17,44 +17,44 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useEffect, useState } from 'react';
+import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
+import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import Title from '@douyinfe/semi-ui/lib/es/typography/title';
+import { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import TelegramLoginButton from 'react-telegram-login';
+import Turnstile from 'react-turnstile';
 import { UserContext } from '../../context/User';
 import {
   API,
+  buildAssertionResult,
   getLogo,
+  getSystemName,
+  isPasskeySupported,
+  onDiscordOAuthClicked,
+  onGitHubOAuthClicked,
+  onLinuxDOOAuthClicked,
+  onOIDCClicked,
+  prepareCredentialRequestOptions,
+  setUserData,
   showError,
   showInfo,
   showSuccess,
   updateAPI,
-  getSystemName,
-  setUserData,
-  onGitHubOAuthClicked,
-  onOIDCClicked,
-  onLinuxDOOAuthClicked,
-  onDiscordOAuthClicked,
-  prepareCredentialRequestOptions,
-  buildAssertionResult,
-  isPasskeySupported,
 } from '../../helpers';
-import Turnstile from 'react-turnstile';
-import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
-import TelegramLoginButton from 'react-telegram-login';
 
 import {
   IconGithubLogo,
-  IconMail,
-  IconLock,
   IconKey,
+  IconLock,
+  IconMail,
 } from '@douyinfe/semi-icons';
+import { useTranslation } from 'react-i18next';
+import DiscordIcon from '../common/logo/DiscordIcon';
+import LinuxDoIcon from '../common/logo/LinuxDoIcon';
 import OIDCIcon from '../common/logo/OIDCIcon';
 import WeChatIcon from '../common/logo/WeChatIcon';
-import LinuxDoIcon from '../common/logo/LinuxDoIcon';
-import DiscordIcon from '../common/logo/DiscordIcon';
 import TwoFAVerification from './TwoFAVerification';
-import { useTranslation } from 'react-i18next';
 
 const LoginForm = () => {
   let navigate = useNavigate();
@@ -665,46 +665,47 @@ const LoginForm = () => {
                   onChange={(value) => handleChange('password', value)}
                   prefix={<IconLock />}
                 />
+              </Form>
 
-                {(hasUserAgreement || hasPrivacyPolicy) && (
-                  <div className='pt-4'>
-                    <Checkbox
-                      checked={agreedToTerms}
-                      onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    >
-                      <Text size='small' className='text-gray-600'>
-                        {t('我已阅读并同意')}
-                        {hasUserAgreement && (
-                          <>
-                            <a
-                              href='/user-agreement'
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
-                            >
-                              {t('用户协议')}
-                            </a>
-                          </>
-                        )}
-                        {hasUserAgreement && hasPrivacyPolicy && t('和')}
-                        {hasPrivacyPolicy && (
-                          <>
-                            <a
-                              href='/privacy-policy'
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
-                            >
-                              {t('隐私政策')}
-                            </a>
-                          </>
-                        )}
-                      </Text>
-                    </Checkbox>
-                  </div>
-                )}
+              {(hasUserAgreement || hasPrivacyPolicy) && (
+                <div className='pt-4'>
+                  <Checkbox
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  >
+                    <Text size='small' className='text-gray-600'>
+                      {t('我已阅读并同意')}
+                      {hasUserAgreement && (
+                        <>
+                          <a
+                            href='/user-agreement'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('用户协议')}
+                          </a>
+                        </>
+                      )}
+                      {hasUserAgreement && hasPrivacyPolicy && t('和')}
+                      {hasPrivacyPolicy && (
+                        <>
+                          <a
+                            href='/privacy-policy'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('隐私政策')}
+                          </a>
+                        </>
+                      )}
+                    </Text>
+                  </Checkbox>
+                </div>
+              )}
 
-                <div className='space-y-2 pt-2'>
+              <div className='space-y-2 pt-2'>
                   <Button
                     theme='solid'
                     className='w-full !rounded-full'
@@ -727,12 +728,12 @@ const LoginForm = () => {
                     {t('忘记密码？')}
                   </Button>
                 </div>
-              </Form>
 
               {(status.github_oauth ||
                 status.oidc_enabled ||
                 status.wechat_login ||
                 status.linuxdo_oauth ||
+                status.discord_oauth ||
                 status.telegram_oauth) && (
                 <>
                   <Divider margin='12px' align='center'>
@@ -868,6 +869,7 @@ const LoginForm = () => {
           status.oidc_enabled ||
           status.wechat_login ||
           status.linuxdo_oauth ||
+          status.discord_oauth ||
           status.telegram_oauth
         )
           ? renderEmailLoginForm()

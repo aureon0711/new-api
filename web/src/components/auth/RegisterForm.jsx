@@ -17,42 +17,39 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useEffect, useState } from 'react';
+import {
+  IconGithubLogo,
+  IconKey,
+  IconLock,
+  IconMail,
+  IconUser,
+} from '@douyinfe/semi-icons';
+import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
+import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import Title from '@douyinfe/semi-ui/lib/es/typography/title';
+import { useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import TelegramLoginButton from 'react-telegram-login/src';
+import Turnstile from 'react-turnstile';
+import { StatusContext } from '../../context/Status';
+import { UserContext } from '../../context/User';
 import {
   API,
   getLogo,
+  getSystemName,
+  onGitHubOAuthClicked,
+  onLinuxDOOAuthClicked,
+  onOIDCClicked,
+  setUserData,
   showError,
   showInfo,
   showSuccess,
   updateAPI,
-  getSystemName,
-  setUserData,
 } from '../../helpers';
-import Turnstile from 'react-turnstile';
-import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
-import {
-  IconGithubLogo,
-  IconMail,
-  IconUser,
-  IconLock,
-  IconKey,
-} from '@douyinfe/semi-icons';
-import {
-  onGitHubOAuthClicked,
-  onLinuxDOOAuthClicked,
-  onOIDCClicked,
-  onDiscordOAuthClicked,
-} from '../../helpers';
-import OIDCIcon from '../common/logo/OIDCIcon';
 import LinuxDoIcon from '../common/logo/LinuxDoIcon';
+import OIDCIcon from '../common/logo/OIDCIcon';
 import WeChatIcon from '../common/logo/WeChatIcon';
-import DiscordIcon from '../common/logo/DiscordIcon';
-import TelegramLoginButton from 'react-telegram-login/src';
-import { UserContext } from '../../context/User';
-import { useTranslation } from 'react-i18next';
 
 const RegisterForm = () => {
   let navigate = useNavigate();
@@ -97,10 +94,8 @@ const RegisterForm = () => {
     localStorage.setItem('aff', affCode);
   }
 
-  const [status] = useState(() => {
-    const savedStatus = localStorage.getItem('status');
-    return savedStatus ? JSON.parse(savedStatus) : {};
-  });
+  // 使用全局 StatusContext，避免需要刷新注册页才能看到新启用的 OAuth 方式
+  const [status] = useContext(StatusContext);
 
   const [showEmailVerification, setShowEmailVerification] = useState(() => {
     return status.email_verification ?? false;
@@ -514,59 +509,58 @@ const RegisterForm = () => {
                     />
                   </>
                 )}
-
-                {(hasUserAgreement || hasPrivacyPolicy) && (
-                  <div className='pt-4'>
-                    <Checkbox
-                      checked={agreedToTerms}
-                      onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    >
-                      <Text size='small' className='text-gray-600'>
-                        {t('我已阅读并同意')}
-                        {hasUserAgreement && (
-                          <>
-                            <a
-                              href='/user-agreement'
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
-                            >
-                              {t('用户协议')}
-                            </a>
-                          </>
-                        )}
-                        {hasUserAgreement && hasPrivacyPolicy && t('和')}
-                        {hasPrivacyPolicy && (
-                          <>
-                            <a
-                              href='/privacy-policy'
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
-                            >
-                              {t('隐私政策')}
-                            </a>
-                          </>
-                        )}
-                      </Text>
-                    </Checkbox>
-                  </div>
-                )}
-
-                <div className='space-y-2 pt-2'>
-                  <Button
-                    theme='solid'
-                    className='w-full !rounded-full'
-                    type='primary'
-                    htmlType='submit'
-                    onClick={handleSubmit}
-                    loading={registerLoading}
-                    disabled={(hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms}
-                  >
-                    {t('注册')}
-                  </Button>
-                </div>
               </Form>
+
+              {(hasUserAgreement || hasPrivacyPolicy) && (
+                <div className='pt-4'>
+                  <Checkbox
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  >
+                    <Text size='small' className='text-gray-600'>
+                      {t('我已阅读并同意')}
+                      {hasUserAgreement && (
+                        <>
+                          <a
+                            href='/user-agreement'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('用户协议')}
+                          </a>
+                        </>
+                      )}
+                      {hasUserAgreement && hasPrivacyPolicy && t('和')}
+                      {hasPrivacyPolicy && (
+                        <>
+                          <a
+                            href='/privacy-policy'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('隐私政策')}
+                          </a>
+                        </>
+                      )}
+                    </Text>
+                  </Checkbox>
+                </div>
+              )}
+
+              <div className='space-y-2 pt-2'>
+                <Button
+                  theme='solid'
+                  className='w-full !rounded-full'
+                  type='primary'
+                  onClick={handleSubmit}
+                  loading={registerLoading}
+                  disabled={(hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms}
+                >
+                  {t('注册')}
+                </Button>
+              </div>
 
               {(status.github_oauth ||
                 status.oidc_enabled ||
