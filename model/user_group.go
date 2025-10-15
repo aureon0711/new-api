@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 // UserGroup 用户组表
 type UserGroup struct {
 	Id          int            `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name        string         `json:"name" gorm:"type:varchar(64);not null;uniqueIndex"` // 用户组名称，唯一
+	Name        string         `json:"name" gorm:"type:varchar(64);not null;index"` // 用户组名称（可重复）
 	DisplayName string         `json:"display_name" gorm:"type:varchar(128);not null"`     // 显示名称
 	Description string         `json:"description" gorm:"type:text"`                      // 描述
 	Config      string         `json:"config" gorm:"type:longtext"`                        // JSON配置，包含自动分配规则等
@@ -42,40 +43,26 @@ type AutoAssignRule struct {
 
 // UserGroupPermissions 用户组权限
 type UserGroupPermissions struct {
-	// 模型权限
-	ModelPermissions []string `json:"model_permissions"`
+	// 可访问的模型分组（对应 Pricing 中的 EnableGroup）
+	EnableGroups []string `json:"enable_groups"`
 	
 	// 功能权限
-	CanUseChat     bool `json:"can_use_chat"`
+	CanUseChat       bool `json:"can_use_chat"`
 	CanUsePlayground bool `json:"can_use_playground"`
-	CanUseDrawing  bool `json:"can_use_drawing"`
+	CanUseDrawing    bool `json:"can_use_drawing"`
 	CanUseMidjourney bool `json:"can_use_midjourney"`
 	
 	// 其他权限
 	Extra map[string]bool `json:"extra,omitempty"`
 }
 
-// ModelGroup 模型分组表
-type ModelGroup struct {
-	Id          int            `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name        string         `json:"name" gorm:"type:varchar(64);not null;uniqueIndex"` // 分组名称，唯一
-	DisplayName string         `json:"display_name" gorm:"type:varchar(128);not null"`     // 显示名称
-	Description string         `json:"description" gorm:"type:text"`                      // 描述
-	ModelList   string         `json:"model_list" gorm:"type:longtext"`                   // JSON格式的模型列表
-	Status      int            `json:"status" gorm:"default:1"`                           // 状态：1启用，2禁用
-	CreatedTime int64          `json:"created_time" gorm:"bigint"`
-	UpdatedTime int64          `json:"updated_time" gorm:"bigint"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-}
-
-// UserGroupModelPermission 用户组与模型分组的权限关联表
-type UserGroupModelPermission struct {
-	Id            int    `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserGroupId   int    `json:"user_group_id" gorm:"not null;index"`     // 用户组ID
-	ModelGroupId  int    `json:"model_group_id" gorm:"not null;index"`    // 模型分组ID
-	Permission    int    `json:"permission" gorm:"default:1"`             // 权限级别：1只读，2可用
-	CreatedTime   int64  `json:"created_time" gorm:"bigint"`
-	UpdatedTime   int64  `json:"updated_time" gorm:"bigint"`
+// UserGroupEnableGroups 用户组与模型分组（EnableGroup）的映射表
+type UserGroupEnableGroups struct {
+	Id          int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserGroupId int    `json:"user_group_id" gorm:"not null;index"`   // 用户组ID
+	EnableGroup string `json:"enable_group" gorm:"type:varchar(64);not null;index"` // 模型分组名称（对应 Pricing 的 EnableGroup）
+	CreatedTime int64  `json:"created_time" gorm:"bigint"`
+	UpdatedTime int64  `json:"updated_time" gorm:"bigint"`
 }
 
 // TableName 设置表名
@@ -83,12 +70,8 @@ func (UserGroup) TableName() string {
 	return "user_groups"
 }
 
-func (ModelGroup) TableName() string {
-	return "model_groups"
-}
-
-func (UserGroupModelPermission) TableName() string {
-	return "user_group_model_permissions"
+func (UserGroupEnableGroups) TableName() string {
+	return "user_group_enable_groups"
 }
 
 // Insert 插入用户组
@@ -125,50 +108,9 @@ func (ug *UserGroup) SetConfig(config UserGroupConfig) {
 	ug.Config = string(configBytes)
 }
 
-// Insert 插入模型分组
-func (mg *ModelGroup) Insert() error {
-	now := time.Now().Unix()
-	mg.CreatedTime = now
-	mg.UpdatedTime = now
-	return DB.Create(mg).Error
-}
-
-// Update 更新模型分组
-func (mg *ModelGroup) Update() error {
-	mg.UpdatedTime = time.Now().Unix()
-	return DB.Save(mg).Error
-}
-
-// Delete 删除模型分组
-func (mg *ModelGroup) Delete() error {
-	return DB.Delete(mg).Error
-}
-
-// GetModelList 获取模型分组中的模型列表
-func (mg *ModelGroup) GetModelList() []string {
-	var models []string
-	if mg.ModelList != "" {
-		json.Unmarshal([]byte(mg.ModelList), &models)
-	}
-	return models
-}
-
-// SetModelList 设置模型分组中的模型列表
-func (mg *ModelGroup) SetModelList(models []string) {
-	modelBytes, _ := json.Marshal(models)
-	mg.ModelList = string(modelBytes)
-}
-
 // GetAllUserGroups 获取所有用户组
 func GetAllUserGroups() ([]*UserGroup, error) {
 	var groups []*UserGroup
-	err := DB.Where("status = ?", 1).Order("id DESC").Find(&groups).Error
-	return groups, err
-}
-
-// GetAllModelGroups 获取所有模型分组
-func GetAllModelGroups() ([]*ModelGroup, error) {
-	var groups []*ModelGroup
 	err := DB.Where("status = ?", 1).Order("id DESC").Find(&groups).Error
 	return groups, err
 }
@@ -180,69 +122,19 @@ func GetUserGroupById(id int) (*UserGroup, error) {
 	return &group, err
 }
 
-// GetModelGroupById 根据ID获取模型分组
-func GetModelGroupById(id int) (*ModelGroup, error) {
-	var group ModelGroup
-	err := DB.First(&group, id).Error
-	return &group, err
-}
-
-// GetUserGroupModelPermissions 获取用户组的模型权限
-func GetUserGroupModelPermissions(userGroupId int) ([]*UserGroupModelPermission, error) {
-	var permissions []*UserGroupModelPermission
-	err := DB.Where("user_group_id = ?", userGroupId).Find(&permissions).Error
-	return permissions, err
-}
-
-// CreateUserGroupModelPermission 创建用户组模型权限
-func CreateUserGroupModelPermission(userGroupId, modelGroupId, permission int) error {
-	perm := UserGroupModelPermission{
-		UserGroupId:  userGroupId,
-		ModelGroupId: modelGroupId,
-		Permission:   permission,
-		CreatedTime:  time.Now().Unix(),
-		UpdatedTime:  time.Now().Unix(),
+// GetUserGroupEnableGroups 获取用户组的可访问模型分组列表
+func GetUserGroupEnableGroups(userGroupId int) ([]string, error) {
+	var records []*UserGroupEnableGroups
+	err := DB.Where("user_group_id = ?", userGroupId).Find(&records).Error
+	if err != nil {
+		return nil, err
 	}
-	return DB.Create(&perm).Error
-}
-
-// UpdateUserGroupModelPermission 更新用户组模型权限
-func UpdateUserGroupModelPermission(userGroupId, modelGroupId, permission int) error {
-	updates := map[string]interface{}{
-		"permission":   permission,
-		"updated_time": time.Now().Unix(),
+	
+	groups := make([]string, len(records))
+	for i, record := range records {
+		groups[i] = record.EnableGroup
 	}
-	return DB.Model(&UserGroupModelPermission{}).
-		Where("user_group_id = ? AND model_group_id = ?", userGroupId, modelGroupId).
-		Updates(updates).Error
-}
-
-// DeleteUserGroupModelPermission 删除用户组模型权限
-func DeleteUserGroupModelPermission(userGroupId, modelGroupId int) error {
-	return DB.Where("user_group_id = ? AND model_group_id = ?", userGroupId, modelGroupId).
-		Delete(&UserGroupModelPermission{}).Error
-}
-
-// GetUserGroupModelPermission 获取特定用户组对特定模型分组的权限
-func GetUserGroupModelPermission(userGroupId, modelGroupId int) (*UserGroupModelPermission, error) {
-	var perm UserGroupModelPermission
-	err := DB.Where("user_group_id = ? AND model_group_id = ?", userGroupId, modelGroupId).
-		First(&perm).Error
-	return &perm, err
-}
-
-// IsUserGroupExists 检查用户组是否存在
-func IsUserGroupExists(name string) (bool, error) {
-	var count int64
-	err := DB.Model(&UserGroup{}).Where("name = ?", name).Count(&count).Error
-	return count > 0, err
-}
-
-// IsModelGroupExists 检查模型分组是否存在
-func IsModelGroupExists(name string) (bool, error) {
-	var count int64
-	err := DB.Model(&ModelGroup{}).Where("name = ?", name).Count(&count).Error
-	return count > 0, err
+	return groups, nil
 }
 
 // GetAllUserGroupsWithPagination 获取所有用户组（带分页）
@@ -251,21 +143,6 @@ func GetAllUserGroupsWithPagination(startIdx int, pageSize int) ([]*UserGroup, i
 	var total int64
 	
 	db := DB.Model(&UserGroup{})
-	err := db.Count(&total).Error
-	if err != nil {
-		return nil, 0, err
-	}
-	
-	err = db.Order("id desc").Limit(pageSize).Offset(startIdx).Find(&groups).Error
-	return groups, total, err
-}
-
-// GetAllModelGroupsWithPagination 获取所有模型分组（带分页）
-func GetAllModelGroupsWithPagination(startIdx int, pageSize int) ([]*ModelGroup, int64, error) {
-	var groups []*ModelGroup
-	var total int64
-	
-	db := DB.Model(&ModelGroup{})
 	err := db.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
@@ -295,65 +172,99 @@ func SearchUserGroups(keyword string, startIdx int, pageSize int) ([]*UserGroup,
 	return groups, total, err
 }
 
-// SearchModelGroups 搜索模型分组
-func SearchModelGroups(keyword string, startIdx int, pageSize int) ([]*ModelGroup, int64, error) {
-	var groups []*ModelGroup
-	var total int64
-	
-	db := DB.Model(&ModelGroup{})
-	if keyword != "" {
-		db = db.Where("name LIKE ? OR display_name LIKE ? OR description LIKE ?", 
-			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+// UpdateUserGroupEnableGroups 批量更新用户组的可访问模型分组（增强版 - 防止数据丢失）
+func UpdateUserGroupEnableGroups(userGroupId int, enableGroups []string) error {
+	// 1. 参数验证
+	if userGroupId <= 0 {
+		return fmt.Errorf("invalid user group id: %d", userGroupId)
 	}
 	
-	err := db.Count(&total).Error
-	if err != nil {
-		return nil, 0, err
+	// 2. 去重并过滤空值
+	uniqueGroups := make(map[string]bool)
+	for _, group := range enableGroups {
+		trimmed := string([]rune(group)) // 去除可能的空格
+		if trimmed != "" {
+			uniqueGroups[trimmed] = true
+		}
 	}
 	
-	err = db.Order("id desc").Limit(pageSize).Offset(startIdx).Find(&groups).Error
-	return groups, total, err
-}
-
-// UpdateUserGroupModelPermissions 批量更新用户组的模型权限
-func UpdateUserGroupModelPermissions(userGroupId int, modelGroupIds []int) error {
-	// 开启事务
+	// 3. 开启事务，确保原子性操作
 	return DB.Transaction(func(tx *gorm.DB) error {
-		// 删除旧的权限
-		if err := tx.Where("user_group_id = ?", userGroupId).Delete(&UserGroupModelPermission{}).Error; err != nil {
-			return err
+		// 3.1 验证用户组是否存在
+		var userGroup UserGroup
+		if err := tx.First(&userGroup, userGroupId).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("user group not found: %d", userGroupId)
+			}
+			return fmt.Errorf("failed to verify user group: %w", err)
 		}
 		
-		// 创建新的权限
+		// 3.2 查询当前的权限配置（用于备份和日志）
+		var oldRecords []*UserGroupEnableGroups
+		if err := tx.Where("user_group_id = ?", userGroupId).Find(&oldRecords).Error; err != nil {
+			return fmt.Errorf("failed to query old records: %w", err)
+		}
+		
+		// 3.3 删除旧的映射（在事务中，失败会回滚）
+		if err := tx.Where("user_group_id = ?", userGroupId).Delete(&UserGroupEnableGroups{}).Error; err != nil {
+			return fmt.Errorf("failed to delete old records: %w", err)
+		}
+		
+		// 3.4 如果没有新的权限配置，允许清空权限（合法操作）
+		if len(uniqueGroups) == 0 {
+			// 记录日志：权限被清空
+			return nil
+		}
+		
+		// 3.5 批量创建新的映射
 		now := time.Now().Unix()
-		for _, modelGroupId := range modelGroupIds {
-			perm := UserGroupModelPermission{
-				UserGroupId:  userGroupId,
-				ModelGroupId: modelGroupId,
-				Permission:   2, // 默认可用权限
-				CreatedTime:  now,
-				UpdatedTime:  now,
-			}
-			if err := tx.Create(&perm).Error; err != nil {
-				return err
+		newRecords := make([]*UserGroupEnableGroups, 0, len(uniqueGroups))
+		
+		for group := range uniqueGroups {
+			newRecords = append(newRecords, &UserGroupEnableGroups{
+				UserGroupId: userGroupId,
+				EnableGroup: group,
+				CreatedTime: now,
+				UpdatedTime: now,
+			})
+		}
+		
+		// 使用批量插入提高性能（每批100条）
+		if err := tx.CreateInBatches(newRecords, 100).Error; err != nil {
+			return fmt.Errorf("failed to create new records: %w", err)
+		}
+		
+		// 3.6 数据完整性验证（确保插入的数据数量正确）
+		var count int64
+		if err := tx.Model(&UserGroupEnableGroups{}).Where("user_group_id = ?", userGroupId).Count(&count).Error; err != nil {
+			return fmt.Errorf("failed to verify inserted records: %w", err)
+		}
+		
+		if int(count) != len(uniqueGroups) {
+			return fmt.Errorf("data integrity check failed: expected %d records, got %d (transaction will be rolled back)", len(uniqueGroups), count)
+		}
+		
+		// 3.7 二次验证：读取插入的数据并比对
+		var verifyRecords []*UserGroupEnableGroups
+		if err := tx.Where("user_group_id = ?", userGroupId).Find(&verifyRecords).Error; err != nil {
+			return fmt.Errorf("failed to verify records: %w", err)
+		}
+		
+		// 确保所有应该存在的EnableGroup都存在
+		insertedGroups := make(map[string]bool)
+		for _, record := range verifyRecords {
+			insertedGroups[record.EnableGroup] = true
+		}
+		
+		for group := range uniqueGroups {
+			if !insertedGroups[group] {
+				return fmt.Errorf("data verification failed: group '%s' not found after insertion (transaction will be rolled back)", group)
 			}
 		}
 		
+		// 所有检查通过，事务将自动提交
 		return nil
 	})
-}
-
-// GetModelGroupsByUserGroup 获取用户组可访问的模型分组列表
-func GetModelGroupsByUserGroup(userGroupId int) ([]*ModelGroup, error) {
-	var modelGroups []*ModelGroup
-	
-	err := DB.Table("model_groups").
-		Joins("INNER JOIN user_group_model_permissions ON model_groups.id = user_group_model_permissions.model_group_id").
-		Where("user_group_model_permissions.user_group_id = ?", userGroupId).
-		Where("model_groups.status = ?", 1).
-		Find(&modelGroups).Error
-	
-	return modelGroups, err
 }
 
 // GetUserGroupByName 根据名称获取用户组
@@ -363,9 +274,30 @@ func GetUserGroupByName(name string) (*UserGroup, error) {
 	return &group, err
 }
 
-// GetModelGroupByName 根据名称获取模型分组
-func GetModelGroupByName(name string) (*ModelGroup, error) {
-	var group ModelGroup
-	err := DB.Where("name = ?", name).First(&group).Error
-	return &group, err
+// GetAllEnableGroupsFromPricing 从 Pricing 系统获取所有可用的 EnableGroup
+func GetAllEnableGroupsFromPricing() ([]string, error) {
+	// 从 pricing 表中获取所有不同的 enable_group
+	var groups []string
+	
+	// 查询所有启用的 ability 记录
+	var abilities []*Ability
+	err := DB.Where("status = ?", 1).Find(&abilities).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// 使用 map 去重
+	groupMap := make(map[string]bool)
+	for _, ability := range abilities {
+		if ability.Group != "" {
+			groupMap[ability.Group] = true
+		}
+	}
+	
+	// 转换为数组
+	for group := range groupMap {
+		groups = append(groups, group)
+	}
+	
+	return groups, nil
 }

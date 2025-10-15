@@ -283,21 +283,15 @@ func SetApiRouter(router *gin.Engine) {
 			userGroupRoute.POST("/", controller.CreateUserGroup)
 			userGroupRoute.PUT("/", controller.UpdateUserGroup)
 			userGroupRoute.DELETE("/:id", controller.DeleteUserGroup)
-			userGroupRoute.GET("/:id/permissions", controller.GetUserGroupModelPermissions)
-			userGroupRoute.PUT("/:id/permissions", controller.UpdateUserGroupModelPermissions)
-			userGroupRoute.GET("/:id/model_groups", controller.GetModelGroupsByUserGroup)
+			userGroupRoute.GET("/:id/enable_groups", controller.GetUserGroupEnableGroups)
+			userGroupRoute.PUT("/:id/enable_groups", controller.UpdateUserGroupEnableGroups)
 		}
 
-		// 模型分组管理路由
-		modelGroupRoute := apiRouter.Group("/model_group")
-		modelGroupRoute.Use(middleware.RootAuth())
+		// 模型分组路由（从 Pricing 系统获取）
+		enableGroupRoute := apiRouter.Group("/enable_group")
+		enableGroupRoute.Use(middleware.RootAuth())
 		{
-			modelGroupRoute.GET("/", controller.GetAllModelGroups)
-			modelGroupRoute.GET("/search", controller.SearchModelGroups)
-			modelGroupRoute.GET("/:id", controller.GetModelGroup)
-			modelGroupRoute.POST("/", controller.CreateModelGroup)
-			modelGroupRoute.PUT("/", controller.UpdateModelGroup)
-			modelGroupRoute.DELETE("/:id", controller.DeleteModelGroup)
+			enableGroupRoute.GET("/", controller.GetAllEnableGroups)
 		}
 	}
 }
