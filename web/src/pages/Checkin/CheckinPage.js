@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import { IconCalendar, IconCheckCircleStroked, IconClock, IconGift, IconTrophy } from '@douyinfe/semi-icons';
+import { IconCalendar, IconCheckCircleStroked, IconClock, IconGift, IconTrophyStroked } from '@douyinfe/semi-icons';
 import { Button, Card, Empty, Input, Modal, Pagination, Spin, Typography } from '@douyinfe/semi-ui';
 import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -288,7 +288,7 @@ const CheckinPage = () => {
           <Card className='stat-card stat-card-green'>
             <div className='stat-card-content'>
               <div className='stat-icon'>
-                <IconTrophy size='extra-large' />
+                <IconTrophyStroked size='extra-large' />
               </div>
               <div className='stat-info'>
                 <Text type='secondary' className='stat-label'>{t('连续签到')}</Text>
@@ -373,7 +373,7 @@ const CheckinPage = () => {
                         <span className='reward-amount'>${renderQuota(record.quota)}</span>
                       </div>
                       <div className='history-streak'>
-                        <IconTrophy size='small' style={{ color: '#faad14' }} />
+                        <IconTrophyStroked size='small' style={{ color: '#faad14' }} />
                         <span>{record.consecutive_days || 1} {t('天')}</span>
                       </div>
                     </div>
