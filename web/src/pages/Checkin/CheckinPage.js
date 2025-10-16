@@ -17,8 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import { Button, Card, Empty, Input, Modal, Pagination, Typography, Spin } from '@douyinfe/semi-ui';
-import { IconCalendar, IconGift, IconTrophy, IconCheckCircle, IconClock } from '@douyinfe/semi-icons';
+import { IconCalendar, IconCheckCircleStroked, IconClock, IconGift, IconTrophy } from '@douyinfe/semi-icons';
+import { Button, Card, Empty, Input, Modal, Pagination, Spin, Typography } from '@douyinfe/semi-ui';
 import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
@@ -246,7 +246,7 @@ const CheckinPage = () => {
                   }
                 }}
                 className='checkin-button'
-                icon={checkinData.checked_today ? <IconCheckCircle /> : <IconCalendar />}
+                icon={checkinData.checked_today ? <IconCheckCircleStroked /> : <IconCalendar />}
               >
                 {checkinData.checked_today ? t('今日已签到') : t('立即签到')}
               </Button>
