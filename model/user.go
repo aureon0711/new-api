@@ -385,6 +385,11 @@ func (user *User) Insert(inviterId int) error {
 	//user.SetAccessToken(common.GetUUID())
 	user.AffCode = common.GetRandomString(4)
 
+	// 如果没有设置用户组，使用默认值
+	if user.Group == "" {
+		user.Group = "default"
+	}
+
 	// 初始化用户设置，包括默认的边栏配置
 	if user.Setting == "" {
 		defaultSetting := dto.UserSetting{}

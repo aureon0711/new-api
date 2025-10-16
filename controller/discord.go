@@ -181,6 +181,8 @@ func DiscordOAuth(c *gin.Context) {
 			user.Email = discordUser.Email
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
+			// 直接使用管理员配置的Discord注册用户组
+			user.Group = common.UserGroupForDiscord
 
 			affCode := session.Get("aff")
 			inviterId := 0

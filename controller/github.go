@@ -141,6 +141,9 @@ func GitHubOAuth(c *gin.Context) {
 			user.Email = githubUser.Email
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
+			// 直接使用管理员配置的GitHub注册用户组
+			user.Group = common.UserGroupForGitHub
+
 			affCode := session.Get("aff")
 			inviterId := 0
 			if affCode != nil {

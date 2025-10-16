@@ -204,3 +204,15 @@ const (
 	TopUpStatusSuccess = "success"
 	TopUpStatusExpired = "expired"
 )
+
+// 用户组自动分配配置：登录方式 -> 用户组名称
+var (
+	UserGroupForGitHub   = "default"
+	UserGroupForEmail    = "default"
+	UserGroupForPassword = "default"
+	UserGroupForDiscord  = "default"
+	UserGroupForTelegram = "default"
+	UserGroupForWeChat   = "default"
+	UserGroupForOIDC     = "default"
+	UserGroupForLinuxDO  = "default"
+)

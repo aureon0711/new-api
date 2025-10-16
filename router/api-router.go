@@ -254,7 +254,7 @@ func SetApiRouter(router *gin.Engine) {
 			modelsRoute.PUT("/", controller.UpdateModelMeta)
 			modelsRoute.DELETE("/:id", controller.DeleteModelMeta)
 		}
-	
+
 		// 签到相关路由
 		checkinRoute := apiRouter.Group("/checkin")
 		checkinRoute.Use(middleware.UserAuth())
@@ -263,7 +263,7 @@ func SetApiRouter(router *gin.Engine) {
 			checkinRoute.GET("/status", controller.GetCheckinStatus)
 			checkinRoute.GET("/history", controller.GetCheckinHistory)
 		}
-	
+
 		// 管理员签到配置路由
 		checkinAdminRoute := apiRouter.Group("/checkin")
 		checkinAdminRoute.Use(middleware.AdminAuth())
@@ -291,7 +291,9 @@ func SetApiRouter(router *gin.Engine) {
 		enableGroupRoute := apiRouter.Group("/enable_group")
 		enableGroupRoute.Use(middleware.RootAuth())
 		{
+			// 同时支持带/与不带/的路径，避免重定向带来的潜在问题
 			enableGroupRoute.GET("/", controller.GetAllEnableGroups)
+			enableGroupRoute.GET("", controller.GetAllEnableGroups)
 		}
 	}
 }

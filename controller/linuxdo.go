@@ -226,6 +226,8 @@ func LinuxdoOAuth(c *gin.Context) {
 				user.DisplayName = linuxdoUser.Name
 				user.Role = common.RoleCommonUser
 				user.Status = common.UserStatusEnabled
+				// 直接使用管理员配置的LinuxDO注册用户组
+				user.Group = common.UserGroupForLinuxDO
 
 				affCode := session.Get("aff")
 				inviterId := 0

@@ -215,6 +215,12 @@ func Register(c *gin.Context) {
 	}
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
+		// 直接使用管理员配置的邮箱注册用户组
+		cleanUser.Group = common.UserGroupForEmail
+	} else {
+		cleanUser.Username = user.Username
+		// 直接使用管理员配置的密码注册用户组
+		cleanUser.Group = common.UserGroupForPassword
 	}
 	if err := cleanUser.Insert(inviterId); err != nil {
 		common.ApiError(c, err)

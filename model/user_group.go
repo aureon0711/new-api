@@ -11,11 +11,11 @@ import (
 // UserGroup 用户组表
 type UserGroup struct {
 	Id          int            `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name        string         `json:"name" gorm:"type:varchar(64);not null;index"` // 用户组名称（可重复）
-	DisplayName string         `json:"display_name" gorm:"type:varchar(128);not null"`     // 显示名称
-	Description string         `json:"description" gorm:"type:text"`                      // 描述
-	Config      string         `json:"config" gorm:"type:longtext"`                        // JSON配置，包含自动分配规则等
-	Status      int            `json:"status" gorm:"default:1"`                           // 状态：1启用，2禁用
+	Name        string         `json:"name" gorm:"type:varchar(64);not null;index"`    // 用户组名称（可重复）
+	DisplayName string         `json:"display_name" gorm:"type:varchar(128);not null"` // 显示名称
+	Description string         `json:"description" gorm:"type:text"`                   // 描述
+	Config      string         `json:"config" gorm:"type:longtext"`                    // JSON配置，包含自动分配规则等
+	Status      int            `json:"status" gorm:"default:1"`                        // 状态：1启用，2禁用
 	CreatedTime int64          `json:"created_time" gorm:"bigint"`
 	UpdatedTime int64          `json:"updated_time" gorm:"bigint"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
@@ -25,10 +25,10 @@ type UserGroup struct {
 type UserGroupConfig struct {
 	// 自动分配规则
 	AutoAssignRules []AutoAssignRule `json:"auto_assign_rules"`
-	
+
 	// 权限设置
 	Permissions UserGroupPermissions `json:"permissions"`
-	
+
 	// 其他配置
 	Extra map[string]interface{} `json:"extra,omitempty"`
 }
@@ -45,13 +45,13 @@ type AutoAssignRule struct {
 type UserGroupPermissions struct {
 	// 可访问的模型分组（对应 Pricing 中的 EnableGroup）
 	EnableGroups []string `json:"enable_groups"`
-	
+
 	// 功能权限
 	CanUseChat       bool `json:"can_use_chat"`
 	CanUsePlayground bool `json:"can_use_playground"`
 	CanUseDrawing    bool `json:"can_use_drawing"`
 	CanUseMidjourney bool `json:"can_use_midjourney"`
-	
+
 	// 其他权限
 	Extra map[string]bool `json:"extra,omitempty"`
 }
@@ -59,7 +59,7 @@ type UserGroupPermissions struct {
 // UserGroupEnableGroups 用户组与模型分组（EnableGroup）的映射表
 type UserGroupEnableGroups struct {
 	Id          int    `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserGroupId int    `json:"user_group_id" gorm:"not null;index"`   // 用户组ID
+	UserGroupId int    `json:"user_group_id" gorm:"not null;index"`                 // 用户组ID
 	EnableGroup string `json:"enable_group" gorm:"type:varchar(64);not null;index"` // 模型分组名称（对应 Pricing 的 EnableGroup）
 	CreatedTime int64  `json:"created_time" gorm:"bigint"`
 	UpdatedTime int64  `json:"updated_time" gorm:"bigint"`
@@ -111,7 +111,7 @@ func (ug *UserGroup) SetConfig(config UserGroupConfig) {
 // GetAllUserGroups 获取所有用户组
 func GetAllUserGroups() ([]*UserGroup, error) {
 	var groups []*UserGroup
-	err := DB.Where("status = ?", 1).Order("id DESC").Find(&groups).Error
+	err := DB.Order("id DESC").Find(&groups).Error
 	return groups, err
 }
 
@@ -129,7 +129,7 @@ func GetUserGroupEnableGroups(userGroupId int) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	groups := make([]string, len(records))
 	for i, record := range records {
 		groups[i] = record.EnableGroup
@@ -141,13 +141,13 @@ func GetUserGroupEnableGroups(userGroupId int) ([]string, error) {
 func GetAllUserGroupsWithPagination(startIdx int, pageSize int) ([]*UserGroup, int64, error) {
 	var groups []*UserGroup
 	var total int64
-	
+
 	db := DB.Model(&UserGroup{})
 	err := db.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	err = db.Order("id desc").Limit(pageSize).Offset(startIdx).Find(&groups).Error
 	return groups, total, err
 }
@@ -156,18 +156,18 @@ func GetAllUserGroupsWithPagination(startIdx int, pageSize int) ([]*UserGroup, i
 func SearchUserGroups(keyword string, startIdx int, pageSize int) ([]*UserGroup, int64, error) {
 	var groups []*UserGroup
 	var total int64
-	
+
 	db := DB.Model(&UserGroup{})
 	if keyword != "" {
-		db = db.Where("name LIKE ? OR display_name LIKE ? OR description LIKE ?", 
+		db = db.Where("name LIKE ? OR display_name LIKE ? OR description LIKE ?",
 			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
-	
+
 	err := db.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	err = db.Order("id desc").Limit(pageSize).Offset(startIdx).Find(&groups).Error
 	return groups, total, err
 }
@@ -178,7 +178,7 @@ func UpdateUserGroupEnableGroups(userGroupId int, enableGroups []string) error {
 	if userGroupId <= 0 {
 		return fmt.Errorf("invalid user group id: %d", userGroupId)
 	}
-	
+
 	// 2. 去重并过滤空值
 	uniqueGroups := make(map[string]bool)
 	for _, group := range enableGroups {
@@ -187,7 +187,7 @@ func UpdateUserGroupEnableGroups(userGroupId int, enableGroups []string) error {
 			uniqueGroups[trimmed] = true
 		}
 	}
-	
+
 	// 3. 开启事务，确保原子性操作
 	return DB.Transaction(func(tx *gorm.DB) error {
 		// 3.1 验证用户组是否存在
@@ -198,28 +198,28 @@ func UpdateUserGroupEnableGroups(userGroupId int, enableGroups []string) error {
 			}
 			return fmt.Errorf("failed to verify user group: %w", err)
 		}
-		
+
 		// 3.2 查询当前的权限配置（用于备份和日志）
 		var oldRecords []*UserGroupEnableGroups
 		if err := tx.Where("user_group_id = ?", userGroupId).Find(&oldRecords).Error; err != nil {
 			return fmt.Errorf("failed to query old records: %w", err)
 		}
-		
+
 		// 3.3 删除旧的映射（在事务中，失败会回滚）
 		if err := tx.Where("user_group_id = ?", userGroupId).Delete(&UserGroupEnableGroups{}).Error; err != nil {
 			return fmt.Errorf("failed to delete old records: %w", err)
 		}
-		
+
 		// 3.4 如果没有新的权限配置，允许清空权限（合法操作）
 		if len(uniqueGroups) == 0 {
 			// 记录日志：权限被清空
 			return nil
 		}
-		
+
 		// 3.5 批量创建新的映射
 		now := time.Now().Unix()
 		newRecords := make([]*UserGroupEnableGroups, 0, len(uniqueGroups))
-		
+
 		for group := range uniqueGroups {
 			newRecords = append(newRecords, &UserGroupEnableGroups{
 				UserGroupId: userGroupId,
@@ -228,40 +228,40 @@ func UpdateUserGroupEnableGroups(userGroupId int, enableGroups []string) error {
 				UpdatedTime: now,
 			})
 		}
-		
+
 		// 使用批量插入提高性能（每批100条）
 		if err := tx.CreateInBatches(newRecords, 100).Error; err != nil {
 			return fmt.Errorf("failed to create new records: %w", err)
 		}
-		
+
 		// 3.6 数据完整性验证（确保插入的数据数量正确）
 		var count int64
 		if err := tx.Model(&UserGroupEnableGroups{}).Where("user_group_id = ?", userGroupId).Count(&count).Error; err != nil {
 			return fmt.Errorf("failed to verify inserted records: %w", err)
 		}
-		
+
 		if int(count) != len(uniqueGroups) {
 			return fmt.Errorf("data integrity check failed: expected %d records, got %d (transaction will be rolled back)", len(uniqueGroups), count)
 		}
-		
+
 		// 3.7 二次验证：读取插入的数据并比对
 		var verifyRecords []*UserGroupEnableGroups
 		if err := tx.Where("user_group_id = ?", userGroupId).Find(&verifyRecords).Error; err != nil {
 			return fmt.Errorf("failed to verify records: %w", err)
 		}
-		
+
 		// 确保所有应该存在的EnableGroup都存在
 		insertedGroups := make(map[string]bool)
 		for _, record := range verifyRecords {
 			insertedGroups[record.EnableGroup] = true
 		}
-		
+
 		for group := range uniqueGroups {
 			if !insertedGroups[group] {
 				return fmt.Errorf("data verification failed: group '%s' not found after insertion (transaction will be rolled back)", group)
 			}
 		}
-		
+
 		// 所有检查通过，事务将自动提交
 		return nil
 	})
@@ -278,14 +278,14 @@ func GetUserGroupByName(name string) (*UserGroup, error) {
 func GetAllEnableGroupsFromPricing() ([]string, error) {
 	// 从 pricing 表中获取所有不同的 enable_group
 	var groups []string
-	
-	// 查询所有启用的 ability 记录
+
+	// 查询所有启用的 ability 记录（Ability 使用 enabled 字段而非 status）
 	var abilities []*Ability
-	err := DB.Where("status = ?", 1).Find(&abilities).Error
+	err := DB.Where("enabled = ?", true).Find(&abilities).Error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 使用 map 去重
 	groupMap := make(map[string]bool)
 	for _, ability := range abilities {
@@ -293,11 +293,101 @@ func GetAllEnableGroupsFromPricing() ([]string, error) {
 			groupMap[ability.Group] = true
 		}
 	}
-	
+
 	// 转换为数组
 	for group := range groupMap {
 		groups = append(groups, group)
 	}
-	
+
 	return groups, nil
+}
+
+// AssignUserGroupByRegistrationType 根据注册方式自动分配用户组
+// registrationType: "github", "email", "discord", "telegram", "wechat", "oidc", "linuxdo", "password"
+// identifier: 用于匹配的标识符（例如邮箱域名、用户ID等）
+// 返回: 分配的用户组名称，如果没有匹配则返回 "default"
+func AssignUserGroupByRegistrationType(registrationType string, identifier string) string {
+	// 1. 获取所有启用的用户组
+	var groups []*UserGroup
+	err := DB.Where("status = ?", 1).Find(&groups).Error
+	if err != nil {
+		// 如果查询失败，返回默认用户组
+		return "default"
+	}
+
+	// 2. 用于存储匹配的规则（按优先级排序）
+	type MatchedRule struct {
+		GroupName string
+		Priority  int
+	}
+	var matchedRules []MatchedRule
+
+	// 3. 遍历所有用户组，检查自动分配规则
+	for _, group := range groups {
+		config := group.GetConfig()
+
+		// 检查该用户组的自动分配规则
+		for _, rule := range config.AutoAssignRules {
+			// 规则必须启用且类型匹配
+			if !rule.Enabled || rule.Type != registrationType {
+				continue
+			}
+
+			// 根据不同的注册类型进行匹配
+			matched := false
+			switch registrationType {
+			case "email":
+				// 邮箱注册：匹配邮箱域名
+				// pattern 示例: "@gmail.com", "@company.com"
+				if identifier != "" && rule.Pattern != "" {
+					// 检查邮箱是否以指定域名结尾
+					if len(identifier) > len(rule.Pattern) &&
+						identifier[len(identifier)-len(rule.Pattern):] == rule.Pattern {
+						matched = true
+					}
+				}
+			case "github", "discord", "telegram", "wechat", "oidc", "linuxdo":
+				// 第三方登录：可以匹配用户ID前缀或特定规则
+				// pattern 示例: "*" (匹配所有), "prefix_*" (前缀匹配)
+				if rule.Pattern == "*" {
+					// 通配符，匹配所有该类型的注册
+					matched = true
+				} else if identifier != "" && rule.Pattern != "" {
+					// 前缀匹配
+					if len(identifier) >= len(rule.Pattern) &&
+						identifier[:len(rule.Pattern)] == rule.Pattern {
+						matched = true
+					}
+				}
+			case "password":
+				// 密码注册：通常使用通配符匹配所有
+				if rule.Pattern == "*" {
+					matched = true
+				}
+			}
+
+			// 如果匹配成功，记录该规则
+			if matched {
+				matchedRules = append(matchedRules, MatchedRule{
+					GroupName: group.Name,
+					Priority:  rule.Priority,
+				})
+			}
+		}
+	}
+
+	// 4. 如果有匹配的规则，选择优先级最高的（数字越小优先级越高）
+	if len(matchedRules) > 0 {
+		// 找到优先级最高的规则
+		bestMatch := matchedRules[0]
+		for _, rule := range matchedRules[1:] {
+			if rule.Priority < bestMatch.Priority {
+				bestMatch = rule
+			}
+		}
+		return bestMatch.GroupName
+	}
+
+	// 5. 如果没有匹配的规则，返回默认用户组
+	return "default"
 }

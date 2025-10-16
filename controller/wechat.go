@@ -94,6 +94,8 @@ func WeChatAuth(c *gin.Context) {
 			user.DisplayName = "WeChat User"
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
+			// 直接使用管理员配置的WeChat注册用户组
+			user.Group = common.UserGroupForWeChat
 
 			if err := user.Insert(0); err != nil {
 				c.JSON(http.StatusOK, gin.H{

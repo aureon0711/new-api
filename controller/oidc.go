@@ -154,6 +154,9 @@ func OidcAuth(c *gin.Context) {
 			} else {
 				user.DisplayName = "OIDC User"
 			}
+			// 直接使用管理员配置的OIDC注册用户组
+			user.Group = common.UserGroupForOIDC
+
 			err := user.Insert(0)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
