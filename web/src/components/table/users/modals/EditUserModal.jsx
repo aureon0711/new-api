@@ -17,40 +17,39 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
-  API,
-  showError,
-  showSuccess,
-  renderQuota,
-  renderQuotaWithPrompt,
-} from '../../../../helpers';
-import { useIsMobile } from '../../../../hooks/common/useIsMobile';
+  IconClose,
+  IconLink,
+  IconPlus,
+  IconSave,
+  IconUser,
+  IconUserGroup,
+} from '@douyinfe/semi-icons';
 import {
+  Avatar,
   Button,
+  Card,
+  Col,
+  Form,
+  InputNumber,
   Modal,
+  Row,
   SideSheet,
   Space,
   Spin,
-  Typography,
-  Card,
   Tag,
-  Form,
-  Avatar,
-  Row,
-  Col,
-  Input,
-  InputNumber,
+  Typography
 } from '@douyinfe/semi-ui';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  IconUser,
-  IconSave,
-  IconClose,
-  IconLink,
-  IconUserGroup,
-  IconPlus,
-} from '@douyinfe/semi-icons';
+  API,
+  renderQuota,
+  renderQuotaWithPrompt,
+  showError,
+  showSuccess,
+} from '../../../../helpers';
+import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 
 const { Text, Title } = Typography;
 
@@ -82,10 +81,23 @@ const EditUserModal = (props) => {
 
   const fetchGroups = async () => {
     try {
-      let res = await API.get(`/api/group/`);
-      setGroupOptions(res.data.data.map((g) => ({ label: g, value: g })));
+      // 使用“用户组设置”中的用户组，而非模型分组
+      // 后端分页参数：p / page_size；这里取足够大的 page_size 获取完整列表
+      const res = await API.get('/api/user_group?p=1&page_size=1000');
+      if (res?.data?.success) {
+        const pageInfo = res.data.data || {};
+        const items = pageInfo.items || [];
+        setGroupOptions(
+          items.map((g) => ({
+            label: g.display_name ? `${g.display_name} (${g.name})` : g.name,
+            value: g.name,
+          })),
+        );
+      } else {
+        showError(res?.data?.message || '加载用户组失败');
+      }
     } catch (e) {
-      showError(e.message);
+      showError(e.message || '加载用户组失败');
     }
   };
 
@@ -279,7 +291,6 @@ const EditUserModal = (props) => {
                           label={t('分组')}
                           placeholder={t('请选择分组')}
                           optionList={groupOptions}
-                          allowAdditions
                           search
                           rules={[{ required: true, message: t('请选择分组') }]}
                         />
