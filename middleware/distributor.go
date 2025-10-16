@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
+	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/service"
@@ -96,6 +97,61 @@ func Distribute() func(c *gin.Context) {
 						userGroup = playgroundRequest.Group
 					}
 				}
+
+				// 检查用户是否有权限访问该模型所属的分组
+				userId := common.GetContextKeyInt(c, constant.ContextKeyUserId)
+				if userId > 0 {
+					// 获取用户所在的用户组信息
+					userCache, err := model.GetUserCache(userId)
+					if err == nil && userCache.Group != "" {
+						// 查询用户组的可访问模型分组列表
+						userGroupId, err := model.GetUserGroupIdByName(userCache.Group)
+						if err == nil && userGroupId > 0 {
+							enableGroups, err := model.GetUserGroupEnableGroups(userGroupId)
+							if err == nil && len(enableGroups) > 0 {
+								// 检查用户是否有权限访问该模型分组
+								// 如果 userGroup 是 "auto"，需要检查所有可能的自动分组
+								clientIP := c.ClientIP()
+								if userGroup == "auto" {
+									// 检查自动分组中是否有用户有权限的分组
+									hasPermission := false
+									var availableGroups []string
+									for _, autoGroup := range setting.AutoGroups {
+										if containsString(enableGroups, autoGroup) {
+											hasPermission = true
+											availableGroups = append(availableGroups, autoGroup)
+										}
+									}
+									if !hasPermission {
+										// 记录错误日志：用户组权限不足
+										logger.LogError(c.Request.Context(), fmt.Sprintf("用户组权限检查失败 | IP: %s | 用户ID: %d | 用户组: %s | 模型: %s | 请求分组: auto | 允许的分组: %v | 自动分组: %v",
+											clientIP, userId, userCache.Group, modelRequest.Model, enableGroups, setting.AutoGroups))
+										abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("用户组 %s 无权访问模型 %s 的任何自动分组", userCache.Group, modelRequest.Model))
+										return
+									} else {
+										// 记录信息日志：权限检查通过
+										logger.LogInfo(c.Request.Context(), fmt.Sprintf("用户组权限检查通过 | IP: %s | 用户ID: %d | 用户组: %s | 模型: %s | 请求分组: auto | 可用的自动分组: %v",
+											clientIP, userId, userCache.Group, modelRequest.Model, availableGroups))
+									}
+								} else {
+									// 检查用户是否有权限访问指定的分组
+									if !containsString(enableGroups, userGroup) {
+										// 记录错误日志：用户组权限不足
+										logger.LogError(c.Request.Context(), fmt.Sprintf("用户组权限检查失败 | IP: %s | 用户ID: %d | 用户组: %s | 模型: %s | 请求分组: %s | 允许的分组: %v",
+											clientIP, userId, userCache.Group, modelRequest.Model, userGroup, enableGroups))
+										abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("用户组 %s 无权访问模型分组 %s", userCache.Group, userGroup))
+										return
+									} else {
+										// 记录信息日志：权限检查通过
+										logger.LogInfo(c.Request.Context(), fmt.Sprintf("用户组权限检查通过 | IP: %s | 用户ID: %d | 用户组: %s | 模型: %s | 请求分组: %s",
+											clientIP, userId, userCache.Group, modelRequest.Model, userGroup))
+									}
+								}
+							}
+						}
+					}
+				}
+
 				channel, selectGroup, err = model.CacheGetRandomSatisfiedChannel(c, userGroup, modelRequest.Model, 0)
 				if err != nil {
 					showGroup := userGroup
@@ -360,4 +416,14 @@ func extractModelNameFromGeminiPath(path string) string {
 
 	// 返回模型名部分
 	return path[startIndex : startIndex+colonIndex]
+}
+
+// containsString checks if a string slice contains a specific string
+func containsString(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

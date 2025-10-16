@@ -274,6 +274,16 @@ func GetUserGroupByName(name string) (*UserGroup, error) {
 	return &group, err
 }
 
+// GetUserGroupIdByName 根据名称获取用户组ID
+func GetUserGroupIdByName(name string) (int, error) {
+	var group UserGroup
+	err := DB.Where("name = ?", name).Select("id").First(&group).Error
+	if err != nil {
+		return 0, err
+	}
+	return group.Id, nil
+}
+
 // GetAllEnableGroupsFromPricing 从 Pricing 系统获取所有可用的 EnableGroup
 func GetAllEnableGroupsFromPricing() ([]string, error) {
 	// 从 pricing 表中获取所有不同的 enable_group
