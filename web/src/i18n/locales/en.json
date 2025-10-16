@@ -666,7 +666,7 @@
     "实付": "Actual payment",
     "实付金额": "Actual payment amount",
     "实付金额：": "Actual payment amount: ",
-    "实际模型": "Actual model",
+    
     "实际请求体": "Actual request body",
     "密码": "Password",
     "密码修改成功！": "Password changed successfully!",
@@ -1674,7 +1674,7 @@
     "请求后端接口失败：": "Failed to request the backend interface: ",
     "请求失败": "Request failed",
     "请求头覆盖": "Request header override",
-    "请求并计费模型": "Request and charge model",
+    
     "请求路径": "Request path",
     "请求时长: ${time}s": "Request time: ${time}s",
     "请求次数": "Number of Requests",

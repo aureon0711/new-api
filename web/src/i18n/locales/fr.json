@@ -669,7 +669,7 @@
     "实付": "Paiement réel",
     "实付金额": "Montant du paiement réel",
     "实付金额：": "Montant du paiement réel : ",
-    "实际模型": "Modèle réel",
+    
     "实际请求体": "Corps de requête réel",
     "密码": "Mot de passe",
     "密码修改成功！": "Mot de passe changé avec succès !",
@@ -1683,7 +1683,7 @@
     "请求后端接口失败：": "Échec de la requête de l'interface backend : ",
     "请求失败": "Échec de la demande",
     "请求头覆盖": "Remplacement des en-têtes de demande",
-    "请求并计费模型": "Modèle de demande et de facturation",
+    
     "请求路径": "Chemin de requête",
     "请求时长: ${time}s": "Durée de la requête : ${time}s",
     "请求次数": "Nombre de demandes",
