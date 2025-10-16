@@ -101,7 +101,7 @@ const CheckinPage = () => {
       const res = await API.post('/api/checkin/', {});
       const { success, message, data } = res.data;
       if (success) {
-        showSuccess(t('签到成功！获得 $') + renderQuota(data.quota));
+        showSuccess(t('签到成功！获得 ') + renderQuota(data.quota));
         setShowSuccessAnimation(true);
         setTimeout(() => setShowSuccessAnimation(false), 2000);
         
@@ -139,7 +139,7 @@ const CheckinPage = () => {
       });
       const { success, message, data } = res.data;
       if (success) {
-        showSuccess(t('签到成功！获得 $') + renderQuota(data.quota));
+        showSuccess(t('签到成功！获得 ') + renderQuota(data.quota));
         setShowCodeModal(false);
         setCheckinCode('');
         setShowSuccessAnimation(true);
@@ -254,7 +254,7 @@ const CheckinPage = () => {
                 <div className='today-reward'>
                   <IconGift style={{ color: '#52c41a' }} />
                   <Text type='success' strong>
-                    {t('今日获得')} ${renderQuota(checkinData.today_checkin.quota)}
+                    {t('今日获得')} {renderQuota(checkinData.today_checkin.quota)}
                   </Text>
                 </div>
               )}
@@ -308,7 +308,7 @@ const CheckinPage = () => {
               </div>
               <div className='stat-info'>
                 <Text type='secondary' className='stat-label'>{t('累计奖励')}</Text>
-                <div className='stat-value'>${renderQuota(checkinData.total_quota)}</div>
+                <div className='stat-value'>{renderQuota(checkinData.total_quota)}</div>
                 <Text type='tertiary' size='small'>{t('美元')}</Text>
               </div>
             </div>
@@ -370,7 +370,7 @@ const CheckinPage = () => {
                     </div>
                     <div className='history-item-right'>
                       <div className='history-reward'>
-                        <span className='reward-amount'>${renderQuota(record.quota)}</span>
+                        <span className='reward-amount'>{renderQuota(record.quota)}</span>
                       </div>
                       <div className='history-streak'>
                         <IconGift size='small' style={{ color: '#faad14' }} />
