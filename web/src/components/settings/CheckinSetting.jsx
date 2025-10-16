@@ -17,22 +17,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState } from 'react';
-import { API, showError, showSuccess } from '../../helpers';
 import {
-  Card,
-  Switch,
-  InputNumber,
-  Input,
-  Button,
-  Space,
-  Typography,
-  Divider,
-  Form,
-  Row,
-  Col,
+    Button,
+    Card,
+    Col,
+    Divider,
+    Input,
+    InputNumber,
+    Row,
+    Space,
+    Switch,
+    Typography
 } from '@douyinfe/semi-ui';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { API, showError, showSuccess } from '../../helpers';
 
 const { Title, Text } = Typography;
 
@@ -40,34 +39,29 @@ const CheckinSetting = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    checkin_enabled: false,
-    checkin_min_quota: 0.01,
-    checkin_max_quota: 0.01,
+    enabled: false,
+    min_quota: 0.01,
+    max_quota: 0.01,
     checkin_code_enabled: false,
     checkin_code: '',
     consecutive_reward_enabled: false,
     consecutive_reward_quota: 0.01,
   });
 
-  const getOptions = async () => {
+  const getConfig = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/api/option/');
+      const res = await API.get('/api/checkin/config');
       const { success, message, data } = res.data;
       if (success) {
-        const options = {};
-        data.forEach((item) => {
-          options[item.key] = item.value;
-        });
-        
         setFormData({
-          checkin_enabled: options.checkin_enabled === 'true',
-          checkin_min_quota: parseFloat(options.checkin_min_quota) || 0.01,
-          checkin_max_quota: parseFloat(options.checkin_max_quota) || 0.01,
-          checkin_code_enabled: options.checkin_code_enabled === 'true',
-          checkin_code: options.checkin_code || '',
-          consecutive_reward_enabled: options.consecutive_reward_enabled === 'true',
-          consecutive_reward_quota: parseFloat(options.consecutive_reward_quota) || 0.01,
+          enabled: data?.enabled ?? false,
+          min_quota: data?.min_quota ?? 0.01,
+          max_quota: data?.max_quota ?? 0.01,
+          checkin_code_enabled: data?.checkin_code_enabled ?? false,
+          checkin_code: data?.checkin_code ?? '',
+          consecutive_reward_enabled: data?.consecutive_reward_enabled ?? false,
+          consecutive_reward_quota: data?.consecutive_reward_quota ?? 0.01,
         });
       } else {
         showError(message);
@@ -79,27 +73,9 @@ const CheckinSetting = () => {
     }
   };
 
-  const updateOption = async (key, value) => {
-    try {
-      const res = await API.put('/api/option/', {
-        key,
-        value,
-      });
-      const { success, message } = res.data;
-      if (success) {
-        showSuccess(t('设置已保存'));
-      } else {
-        showError(message);
-      }
-    } catch (error) {
-      showError(t('保存失败'));
-    }
-  };
-
   const handleSwitchChange = (key, checked) => {
     const newFormData = { ...formData, [key]: checked };
     setFormData(newFormData);
-    updateOption(key, checked.toString());
   };
 
   const handleInputChange = (key, value) => {
@@ -115,15 +91,21 @@ const CheckinSetting = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const updates = [
-        { key: 'checkin_min_quota', value: formData.checkin_min_quota.toString() },
-        { key: 'checkin_max_quota', value: formData.checkin_max_quota.toString() },
-        { key: 'checkin_code', value: formData.checkin_code },
-        { key: 'consecutive_reward_quota', value: formData.consecutive_reward_quota.toString() },
-      ];
-
-      for (const update of updates) {
-        await updateOption(update.key, update.value);
+      const payload = {
+        enabled: formData.enabled,
+        min_quota: Number(formData.min_quota) || 0,
+        max_quota: Number(formData.max_quota) || 0,
+        checkin_code_enabled: formData.checkin_code_enabled,
+        checkin_code: formData.checkin_code || '',
+        consecutive_reward_enabled: formData.consecutive_reward_enabled,
+        consecutive_reward_quota: Number(formData.consecutive_reward_quota) || 0,
+      };
+      const res = await API.put('/api/checkin/config', payload);
+      const { success, message } = res.data;
+      if (success) {
+        showSuccess(t('设置已保存'));
+      } else {
+        showError(message);
       }
     } catch (error) {
       showError(t('保存失败'));
@@ -133,7 +115,7 @@ const CheckinSetting = () => {
   };
 
   useEffect(() => {
-    getOptions();
+    getConfig();
   }, []);
 
   return (
@@ -156,8 +138,8 @@ const CheckinSetting = () => {
               </Text>
             </div>
             <Switch
-              checked={formData.checkin_enabled}
-              onChange={(checked) => handleSwitchChange('checkin_enabled', checked)}
+              checked={formData.enabled}
+              onChange={(checked) => handleSwitchChange('enabled', checked)}
             />
           </div>
 
@@ -173,13 +155,13 @@ const CheckinSetting = () => {
                 </Text>
               </div>
               <InputNumber
-                value={formData.checkin_min_quota}
-                onChange={(value) => handleNumberChange('checkin_min_quota', value)}
+                value={formData.min_quota}
+                onChange={(value) => handleNumberChange('min_quota', value)}
                 min={0}
                 step={0.01}
                 precision={2}
                 style={{ width: '100%', marginTop: 8 }}
-                disabled={!formData.checkin_enabled}
+                disabled={!formData.enabled}
               />
             </Col>
             <Col span={12}>
@@ -191,13 +173,13 @@ const CheckinSetting = () => {
                 </Text>
               </div>
               <InputNumber
-                value={formData.checkin_max_quota}
-                onChange={(value) => handleNumberChange('checkin_max_quota', value)}
+                value={formData.max_quota}
+                onChange={(value) => handleNumberChange('max_quota', value)}
                 min={0}
                 step={0.01}
                 precision={2}
                 style={{ width: '100%', marginTop: 8 }}
-                disabled={!formData.checkin_enabled}
+                disabled={!formData.enabled}
               />
             </Col>
           </Row>
@@ -219,7 +201,7 @@ const CheckinSetting = () => {
             <Switch
               checked={formData.checkin_code_enabled}
               onChange={(checked) => handleSwitchChange('checkin_code_enabled', checked)}
-              disabled={!formData.checkin_enabled}
+              disabled={!formData.enabled}
             />
           </div>
 
@@ -234,7 +216,7 @@ const CheckinSetting = () => {
             value={formData.checkin_code}
             onChange={(value) => handleInputChange('checkin_code', value)}
             placeholder={t('请输入签到码')}
-            disabled={!formData.checkin_enabled || !formData.checkin_code_enabled}
+            disabled={!formData.enabled || !formData.checkin_code_enabled}
           />
         </div>
       </Card>
@@ -254,7 +236,7 @@ const CheckinSetting = () => {
             <Switch
               checked={formData.consecutive_reward_enabled}
               onChange={(checked) => handleSwitchChange('consecutive_reward_enabled', checked)}
-              disabled={!formData.checkin_enabled}
+              disabled={!formData.enabled}
             />
           </div>
 
@@ -272,7 +254,7 @@ const CheckinSetting = () => {
             step={0.01}
             precision={2}
             style={{ width: '100%' }}
-            disabled={!formData.checkin_enabled || !formData.consecutive_reward_enabled}
+            disabled={!formData.enabled || !formData.consecutive_reward_enabled}
           />
         </div>
       </Card>
@@ -286,7 +268,7 @@ const CheckinSetting = () => {
           >
             {t('保存设置')}
           </Button>
-          <Button onClick={getOptions} loading={loading}>
+          <Button onClick={getConfig} loading={loading}>
             {t('重置')}
           </Button>
         </Space>

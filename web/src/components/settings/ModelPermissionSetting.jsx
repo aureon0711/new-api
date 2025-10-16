@@ -17,23 +17,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Space,
-  Typography,
-  Spin,
-  Checkbox,
-  Row,
-  Col,
-  Tag,
-} from '@douyinfe/semi-ui';
-import { API, showError, showSuccess } from '../../helpers';
-import { useTranslation } from 'react-i18next';
 import { IconLink } from '@douyinfe/semi-icons';
+import {
+    Button,
+    Card,
+    Checkbox,
+    Col,
+    Modal,
+    Row,
+    Spin,
+    Table,
+    Tag,
+    Typography
+} from '@douyinfe/semi-ui';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { API, showError, showSuccess } from '../../helpers';
 
 const { Text } = Typography;
 
@@ -51,11 +50,13 @@ const ModelPermissionSetting = () => {
   // 加载用户组列表
   const loadUserGroups = async () => {
     try {
-      const res = await API.get('/api/user_group?page=1&size=1000');
+      // 使用后端的分页参数 p / page_size，并解析返回的 items
+      const res = await API.get('/api/user_group?p=1&page_size=1000');
       const { success, message, data } = res.data;
       
       if (success) {
-        setUserGroups(data.data || []);
+        const pageInfo = data || {};
+        setUserGroups(pageInfo.items || []);
       } else {
         showError(message || t('加载用户组失败'));
       }

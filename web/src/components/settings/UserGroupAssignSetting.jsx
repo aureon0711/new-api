@@ -22,10 +22,8 @@ import {
   Button,
   Card,
   Form,
-  Select,
-  Space,
   Spin,
-  Typography,
+  Typography
 } from '@douyinfe/semi-ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,13 +53,16 @@ const UserGroupAssignSetting = () => {
   // 加载用户组列表
   const loadUserGroups = async () => {
     try {
-      const res = await API.get('/api/user_group?page=1&size=1000');
+      // 后端分页参数为 p / page_size，返回字段为 items
+      const res = await API.get('/api/user_group?p=1&page_size=1000');
       if (res.data.success) {
-        const groups = res.data.data.data || [];
-        setUserGroups(groups.map(g => ({
+        const pageInfo = res.data.data || {};
+        const groups = pageInfo.items || [];
+        const options = groups.map((g) => ({
           label: `${g.display_name} (${g.name})`,
-          value: g.name
-        })));
+          value: g.name,
+        }));
+        setUserGroups(options);
       } else {
         showError(res.data.message || t('加载用户组失败'));
       }

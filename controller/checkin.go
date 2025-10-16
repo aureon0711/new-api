@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
@@ -19,7 +20,7 @@ type CheckinRequest struct {
 func CheckinUser(c *gin.Context) {
 	userId := c.GetInt("id")
 	var req CheckinRequest
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -53,7 +54,7 @@ func CheckinUser(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "签到失败: " + err.Error(),
@@ -69,7 +70,7 @@ func CheckinUser(c *gin.Context) {
 		"success": true,
 		"message": "签到成功",
 		"data": gin.H{
-			"quota": quota,
+			"quota":         quota,
 			"quota_display": "$" + logger.FormatQuota(quota),
 		},
 	})
@@ -78,11 +79,11 @@ func CheckinUser(c *gin.Context) {
 // GetCheckinStatus 获取签到状态
 func GetCheckinStatus(c *gin.Context) {
 	userId := c.GetInt("id")
-	
+
 	// 检查今日是否已签到
 	todayCheckin, err := model.GetTodayCheckin(userId)
 	hasCheckedIn := err == nil
-	
+
 	// 获取签到统计
 	stat, err := model.GetUserCheckinStat(userId)
 	if err != nil {
@@ -112,7 +113,7 @@ func GetCheckinStatus(c *gin.Context) {
 			"total_quota":         stat.TotalQuota,
 		},
 		"config": gin.H{
-			"enabled": config.Enabled,
+			"enabled":              config.Enabled,
 			"checkin_code_enabled": config.CheckinCodeEnabled,
 		},
 	}
@@ -120,27 +121,27 @@ func GetCheckinStatus(c *gin.Context) {
 	// 如果今日已签到，返回签到信息
 	if hasCheckedIn {
 		response["today_checkin"] = gin.H{
-			"quota": todayCheckin.Quota,
+			"quota":         todayCheckin.Quota,
 			"quota_display": "$" + logger.FormatQuota(todayCheckin.Quota),
-			"checkin_time": todayCheckin.CreatedAt,
+			"checkin_time":  todayCheckin.CreatedAt,
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": response,
+		"data":    response,
 	})
 }
 
 // GetCheckinHistory 获取签到历史
 func GetCheckinHistory(c *gin.Context) {
 	userId := c.GetInt("id")
-	
+
 	// 获取分页参数
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	
+
 	if page < 1 {
 		page = 1
 	}
@@ -158,16 +159,42 @@ func GetCheckinHistory(c *gin.Context) {
 		return
 	}
 
+	// 获取该用户所有签到日期集合，用于计算每条记录的连续签到天数
+	allDatesSet, err := model.GetUserCheckinDates(userId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取签到历史失败: " + err.Error(),
+		})
+		return
+	}
+
 	// 格式化响应数据
 	var formattedRecords []gin.H
 	for _, record := range records {
+		// 计算该记录发生当日的连续签到天数
+		// 从 record.CheckinDate 开始，向前逐日检查是否在签到集合中
+		consecutive := 0
+		if record.CheckinDate != "" {
+			if baseDay, err := time.Parse("2006-01-02", record.CheckinDate); err == nil {
+				for i := 0; i < 365; i++ { // 最多检查一年，避免死循环
+					d := baseDay.AddDate(0, 0, -i).Format("2006-01-02")
+					if _, ok := allDatesSet[d]; ok {
+						consecutive++
+					} else {
+						break
+					}
+				}
+			}
+		}
 		formattedRecords = append(formattedRecords, gin.H{
-			"id": record.Id,
-			"quota": record.Quota,
-			"quota_display": "$" + logger.FormatQuota(record.Quota),
-			"checkin_date": record.CheckinDate,
-			"checkin_code": record.CheckinCode,
-			"created_at": record.CreatedAt,
+			"id":               record.Id,
+			"quota":            record.Quota,
+			"quota_display":    "$" + logger.FormatQuota(record.Quota),
+			"checkin_date":     record.CheckinDate,
+			"checkin_code":     record.CheckinCode,
+			"created_at":       record.CreatedAt,
+			"consecutive_days": consecutive,
 		})
 	}
 
@@ -182,7 +209,7 @@ func GetCheckinHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": pageInfo,
+		"data":    pageInfo,
 	})
 }
 
@@ -200,19 +227,19 @@ func GetCheckinConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": config,
+		"data":    config,
 	})
 }
 
 // UpdateCheckinConfig 更新签到配置（管理员用）
 type UpdateCheckinConfigRequest struct {
-	Enabled                 bool `json:"enabled"`
-	MinQuota                int  `json:"min_quota"`
-	MaxQuota                int  `json:"max_quota"`
-	CheckinCodeEnabled      bool `json:"checkin_code_enabled"`
-	CheckinCode             string `json:"checkin_code"`
-	ConsecutiveRewardEnabled bool `json:"consecutive_reward_enabled"`
-	ConsecutiveRewardQuota  int  `json:"consecutive_reward_quota"`
+	Enabled                  bool   `json:"enabled"`
+	MinQuota                 int    `json:"min_quota"`
+	MaxQuota                 int    `json:"max_quota"`
+	CheckinCodeEnabled       bool   `json:"checkin_code_enabled"`
+	CheckinCode              string `json:"checkin_code"`
+	ConsecutiveRewardEnabled bool   `json:"consecutive_reward_enabled"`
+	ConsecutiveRewardQuota   int    `json:"consecutive_reward_quota"`
 }
 
 func UpdateCheckinConfig(c *gin.Context) {
@@ -346,14 +373,14 @@ func GetAllCheckinHistory(c *gin.Context) {
 		}
 
 		formattedRecords = append(formattedRecords, gin.H{
-			"id":           record.Id,
-			"user_id":     record.UserId,
-			"username":    username,
-			"quota":       record.Quota,
+			"id":            record.Id,
+			"user_id":       record.UserId,
+			"username":      username,
+			"quota":         record.Quota,
 			"quota_display": "$" + logger.FormatQuota(record.Quota),
-			"checkin_date": record.CheckinDate,
-			"checkin_code": record.CheckinCode,
-			"created_at":  record.CreatedAt,
+			"checkin_date":  record.CheckinDate,
+			"checkin_code":  record.CheckinCode,
+			"created_at":    record.CreatedAt,
 		})
 	}
 
@@ -363,6 +390,6 @@ func GetAllCheckinHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": pageInfo,
+		"data":    pageInfo,
 	})
 }

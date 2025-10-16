@@ -48,14 +48,16 @@ const UserGroupBasicSetting = () => {
   const loadUserGroups = async (page = 1, size = 10, keyword = '') => {
     setLoading(true);
     try {
-      let url = `/api/user_group?page=${page}&size=${size}`;
+      // 后端分页参数为 p / page_size
+      let url = `/api/user_group?p=${page}&page_size=${size}`;
       if (keyword && keyword.trim()) {
-        url = `/api/user_group/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`;
+        url = `/api/user_group/search?keyword=${encodeURIComponent(keyword)}&p=${page}&page_size=${size}`;
       }
       const res = await API.get(url);
       if (res.data.success) {
-        setUserGroups(res.data.data.data || []);
-        setPagination({ currentPage: page, pageSize: size, total: res.data.data.total });
+        const pageInfo = res.data.data || {};
+        setUserGroups(pageInfo.items || []);
+        setPagination({ currentPage: page, pageSize: size, total: pageInfo.total || 0 });
       } else {
         showError(res.data.message || t('加载失败'));
       }

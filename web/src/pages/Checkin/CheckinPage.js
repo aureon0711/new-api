@@ -17,19 +17,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useState, useContext } from 'react';
-import { API, showError, showSuccess, renderQuota } from '../../helpers';
-import { Card, Button, Input, Modal, Toast, Typography, Empty, Pagination } from '@douyinfe/semi-ui';
+import { Button, Card, Empty, Input, Modal, Pagination, Typography } from '@douyinfe/semi-ui';
+import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
-import { StatusContext } from '../../context/Status';
+import { API, renderQuota, showError, showSuccess } from '../../helpers';
 
 const { Title, Text } = Typography;
 
 const CheckinPage = () => {
   const { t } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
-  const [statusState] = useContext(StatusContext);
 
   // 签到相关状态
   const [checkinData, setCheckinData] = useState(null);
@@ -50,10 +48,25 @@ const CheckinPage = () => {
   // 获取签到汇总信息
   const getCheckinSummary = async () => {
     try {
-      const res = await API.get('/api/user/checkin/summary');
+      // 使用后端提供的 /api/checkin/status 接口，并适配前端字段
+      const res = await API.get('/api/checkin/status');
       const { success, message, data } = res.data;
       if (success) {
-        setCheckinData(data);
+        const mapped = {
+          // 是否开启由后端配置决定
+          enabled: data?.config?.enabled ?? false,
+          // 今日是否已签到
+          checked_today: data?.has_checked_in ?? false,
+          // 连续天数与本月次数、累计额度
+          consecutive_days: data?.stat?.consecutive_days ?? 0,
+          month_count: data?.stat?.this_month_checkins ?? 0,
+          total_quota: data?.stat?.total_quota ?? 0,
+          // 是否启用签到码
+          code_enabled: data?.config?.checkin_code_enabled ?? false,
+          // 今日签到详情（若有）
+          today_checkin: data?.today_checkin || null,
+        };
+        setCheckinData(mapped);
       } else {
         showError(message);
       }
@@ -66,10 +79,11 @@ const CheckinPage = () => {
   const getCheckinHistory = async (page = 1, size = 10) => {
     setHistoryLoading(true);
     try {
-      const res = await API.get(`/api/user/checkin/history?page=${page}&size=${size}`);
+      // 调整为后端实际路由与分页参数名
+      const res = await API.get(`/api/checkin/history?page=${page}&page_size=${size}`);
       const { success, message, data } = res.data;
       if (success) {
-        setCheckinHistory(data.data || []);
+        setCheckinHistory(data.items || []);
         setTotal(data.total || 0);
         setCurrentPage(page);
       } else {
@@ -86,7 +100,8 @@ const CheckinPage = () => {
   const doCheckin = async () => {
     setCheckinLoading(true);
     try {
-      const res = await API.post('/api/user/checkin');
+      // 后端需要 JSON 体进行绑定，即使不使用签到码也需传空对象
+      const res = await API.post('/api/checkin/', {});
       const { success, message, data } = res.data;
       if (success) {
         showSuccess(t('签到成功！获得 $') + renderQuota(data.quota));
@@ -119,8 +134,9 @@ const CheckinPage = () => {
     }
     setCodeSubmitting(true);
     try {
-      const res = await API.post('/api/user/checkin/code', {
-        code: checkinCode.trim()
+      // 使用与普通签到相同的接口，传递 checkin_code 字段
+      const res = await API.post('/api/checkin/', {
+        checkin_code: checkinCode.trim(),
       });
       const { success, message, data } = res.data;
       if (success) {
@@ -158,8 +174,8 @@ const CheckinPage = () => {
     getCheckinHistory(1, pageSize);
   }, []);
 
-  // 检查签到是否关闭
-  const isCheckinDisabled = !statusState?.status?.checkin_enabled;
+  // 根据接口返回的配置判断是否开启
+  const isCheckinDisabled = checkinData ? !checkinData.enabled : false;
 
   if (isCheckinDisabled) {
     return (
