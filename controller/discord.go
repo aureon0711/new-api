@@ -36,19 +36,30 @@ type DiscordUser struct {
 	Avatar        string `json:"avatar"`
 }
 
-// buildRedirectURI 构建Discord回调地址，优先使用系统配置的ServerAddress
-// 强制使用根路径 /oauth/discord（不带 /api 前缀）
+// buildRedirectURI 构建 Discord 回调地址。
+// 注意：前端在发起授权时使用的是 window.location.origin 作为 redirect_uri 的域名部分，
+// 因此这里必须与当前请求的 Host 完全一致，否则 Discord 在交换 code 时会报 invalid_grant。
+// 为了兼容系统设置中的 ServerAddress：只有当 ServerAddress 的 Host 与当前请求 Host 相同
+// 时，才使用其协议（http/https）；否则一律以请求中的 Host/协议为准。
+// 回调固定为根路径 /oauth/discord（不带 /api 前缀）。
 func buildRedirectURI(c *gin.Context) string {
-	base := strings.TrimRight(system_setting.ServerAddress, "/")
-	if base == "" {
-		scheme := "http"
-		if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
-			scheme = "https"
-		}
-		host := c.Request.Host
-		base = fmt.Sprintf("%s://%s", scheme, host)
+	// 推断请求协议
+	scheme := "http"
+	if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
+		scheme = "https"
 	}
-	return base + "/oauth/discord"
+	host := c.Request.Host
+
+	// 如果配置了 ServerAddress，且其 Host 与当前 Host 一致，则采用配置中的协议
+	if sa := strings.TrimSpace(system_setting.ServerAddress); sa != "" {
+		if parsed, err := url.Parse(sa); err == nil && parsed.Host != "" {
+			if strings.EqualFold(parsed.Host, host) && parsed.Scheme != "" {
+				scheme = parsed.Scheme
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s://%s/oauth/discord", scheme, host)
 }
 
 func getDiscordUserInfoByCode(c *gin.Context, code string) (*DiscordUser, error) {
@@ -305,5 +316,4 @@ func DiscordBind(c *gin.Context) {
 		"success": true,
 		"message": "bind",
 	})
-	return
 }
