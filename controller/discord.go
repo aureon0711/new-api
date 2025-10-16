@@ -68,10 +68,25 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	}
 	defer res.Body.Close()
 
+	// 检查HTTP状态码
+	if res.StatusCode != http.StatusOK {
+		var errorResponse map[string]interface{}
+		json.NewDecoder(res.Body).Decode(&errorResponse)
+		common.SysLog(fmt.Sprintf("Discord token exchange failed: status=%d, response=%v", res.StatusCode, errorResponse))
+		return nil, errors.New("Discord 授权失败，请检查配置并重试")
+	}
+
 	var oAuthResponse DiscordOAuthResponse
 	err = json.NewDecoder(res.Body).Decode(&oAuthResponse)
 	if err != nil {
+		common.SysLog(fmt.Sprintf("Failed to decode Discord token response: %v", err))
 		return nil, err
+	}
+
+	// 检查访问令牌是否存在
+	if oAuthResponse.AccessToken == "" {
+		common.SysLog(fmt.Sprintf("Discord access token is empty, response: %+v", oAuthResponse))
+		return nil, errors.New("Discord 授权失败，未获取到访问令牌")
 	}
 
 	// 使用访问令牌获取用户信息
@@ -89,13 +104,23 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	}
 	defer res2.Body.Close()
 
+	// 检查HTTP状态码
+	if res2.StatusCode != http.StatusOK {
+		var errorResponse map[string]interface{}
+		json.NewDecoder(res2.Body).Decode(&errorResponse)
+		common.SysLog(fmt.Sprintf("Discord user info request failed: status=%d, response=%v", res2.StatusCode, errorResponse))
+		return nil, errors.New("获取 Discord 用户信息失败")
+	}
+
 	var discordUser DiscordUser
 	err = json.NewDecoder(res2.Body).Decode(&discordUser)
 	if err != nil {
+		common.SysLog(fmt.Sprintf("Failed to decode Discord user response: %v", err))
 		return nil, err
 	}
 
 	if discordUser.ID == "" {
+		common.SysLog(fmt.Sprintf("Discord user ID is empty, full response: %+v", discordUser))
 		return nil, errors.New("返回值非法，用户字段为空，请稍后重试！")
 	}
 
