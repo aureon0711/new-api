@@ -132,6 +132,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('每日签到'),
         itemKey: 'checkin',
         to: '/checkin',
+        alwaysShow: true, // 每日签到始终显示，不受侧边栏配置控制
       },
       {
         text: t('个人设置'),
@@ -141,7 +142,13 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     ];
 
     // 根据配置过滤项目
+    // 注意：每日签到菜单项始终显示（无论配置如何），即使签到功能关闭
+    // 用户点击后会在页面内看到"签到功能已关闭"的提示
     const filteredItems = items.filter((item) => {
+      // 如果设置了alwaysShow，则始终显示
+      if (item.alwaysShow) {
+        return true;
+      }
       const configVisible = isModuleVisible('personal', item.itemKey);
       return configVisible;
     });
