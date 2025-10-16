@@ -36,7 +36,22 @@ type DiscordUser struct {
 	Avatar        string `json:"avatar"`
 }
 
-func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
+// buildRedirectURI 构建Discord回调地址，优先使用系统配置的ServerAddress
+// 强制使用根路径 /oauth/discord（不带 /api 前缀）
+func buildRedirectURI(c *gin.Context) string {
+	base := strings.TrimRight(system_setting.ServerAddress, "/")
+	if base == "" {
+		scheme := "http"
+		if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
+			scheme = "https"
+		}
+		host := c.Request.Host
+		base = fmt.Sprintf("%s://%s", scheme, host)
+	}
+	return base + "/oauth/discord"
+}
+
+func getDiscordUserInfoByCode(c *gin.Context, code string) (*DiscordUser, error) {
 	if code == "" {
 		return nil, errors.New("无效的参数")
 	}
@@ -48,9 +63,11 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	values.Set("client_secret", common.DiscordClientSecret)
 	values.Set("code", code)
 	values.Set("grant_type", "authorization_code")
-	values.Set("redirect_uri", system_setting.ServerAddress+"/oauth/discord")
+	// 注意：回调路由为 /oauth/discord（不带 /api 前缀）
+	values.Set("redirect_uri", buildRedirectURI(c))
 
-	req, err := http.NewRequest("POST", "https://discord.com/api/v10/oauth2/token", strings.NewReader(values.Encode()))
+	// Discord OAuth2 token 端点不使用版本号（参考官方文档）
+	req, err := http.NewRequest("POST", "https://discord.com/api/oauth2/token", strings.NewReader(values.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +107,8 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	}
 
 	// 使用访问令牌获取用户信息
-	req, err = http.NewRequest("GET", "https://discord.com/api/v10/users/@me", nil)
+	// 获取当前用户信息端点
+	req, err = http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +171,7 @@ func DiscordOAuth(c *gin.Context) {
 	}
 
 	code := c.Query("code")
-	discordUser, err := getDiscordUserInfoByCode(code)
+	discordUser, err := getDiscordUserInfoByCode(c, code)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -248,7 +266,7 @@ func DiscordBind(c *gin.Context) {
 	}
 
 	code := c.Query("code")
-	discordUser, err := getDiscordUserInfoByCode(code)
+	discordUser, err := getDiscordUserInfoByCode(c, code)
 	if err != nil {
 		common.ApiError(c, err)
 		return

@@ -1,6 +1,11 @@
-/* 签到日历样式 */
+/* 签到日历样式（紧凑化） */
 
 .calendar-card {
+  /* 控制网格紧凑度的CSS变量 */
+  --calendar-cell-size: 46px; /* 每个日期格子的最大边长（再下调） */
+  --calendar-gap: 3px;        /* 网格间距（再下调） */
+  /* 计算日历区域的视觉最大宽度（7个格子 + 6个间隔）并居中 */
+  --calendar-max-width: calc(var(--calendar-cell-size) * 7 + var(--calendar-gap) * 6);
   border-radius: 16px;
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -8,20 +13,22 @@
 }
 
 .calendar-card .semi-card-body {
-  padding: 24px;
+  padding: 20px;
+  max-width: calc(var(--calendar-max-width) + 16px); /* 略大于网格，容纳左右内边距 */
+  margin: 0 auto; /* 居中显示 */
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   padding: 0 8px;
 }
 
 .calendar-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   color: #1677ff;
 }
@@ -52,40 +59,48 @@
 }
 
 .calendar-weekdays {
+  /* 与日期网格同样的列宽与间距，并居中 */
+  --cell-size: min(var(--calendar-cell-size), calc((100% - var(--calendar-gap) * 6) / 7));
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 0 4px;
+  grid-template-columns: repeat(7, var(--cell-size));
+  justify-content: center;
+  gap: var(--calendar-gap);
+  margin-bottom: 8px;
+  padding: 0;
 }
 
 .calendar-weekday {
   text-align: center;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: #666;
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
 .calendar-days {
+  /* 计算单元格大小：不超过 --calendar-cell-size，且在窄屏时自动收缩以适配一行7列 */
+  --cell-size: min(var(--calendar-cell-size), calc((100% - var(--calendar-gap) * 6) / 7));
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  padding: 0 4px;
+  grid-template-columns: repeat(7, var(--cell-size));
+  grid-auto-rows: var(--cell-size);
+  justify-content: center;
+  gap: var(--calendar-gap);
+  padding: 0;
 }
 
 .calendar-day {
-  aspect-ratio: 1;
+  width: var(--cell-size);
+  height: var(--cell-size);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 10px;
   position: relative;
   background: #f5f7fa;
   transition: all 0.3s ease;
   cursor: pointer;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
 }
 
 .calendar-day.empty {
@@ -128,16 +143,16 @@
 }
 
 .day-number {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
   z-index: 1;
 }
 
 .check-mark {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 12px;
+  top: 2px;
+  right: 2px;
+  font-size: 11px;
   font-weight: bold;
   animation: checkmarkAppear 0.3s ease-in-out;
 }
@@ -155,9 +170,9 @@
 
 .today-dot {
   position: absolute;
-  bottom: 4px;
-  width: 6px;
-  height: 6px;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
   background: white;
   border-radius: 50%;
   animation: dotPulse 1.5s ease-in-out infinite;
@@ -175,9 +190,9 @@
 .calendar-legend {
   display: flex;
   justify-content: center;
-  gap: 24px;
-  margin-top: 20px;
-  padding-top: 20px;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid #e8e8e8;
 }
 
@@ -188,9 +203,9 @@
 }
 
 .legend-box {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
   border: 2px solid transparent;
 }
 
@@ -228,16 +243,16 @@
   }
 
   .calendar-weekday {
-    font-size: 12px;
-    padding: 6px 0;
+    font-size: 11px;
+    padding: 4px 0;
   }
 
   .calendar-days {
-    gap: 6px;
+    gap: 4px;
   }
 
   .day-number {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .check-mark {
@@ -247,13 +262,13 @@
   }
 
   .calendar-legend {
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
   }
 
   .legend-box {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 }
 

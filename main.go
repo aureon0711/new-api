@@ -146,7 +146,8 @@ func main() {
 		MaxAge:   2592000, // 30 days
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteStrictMode,
+		// OAuth 回跳需要携带 Cookie，使用 Lax 以兼容第三方回调
+		SameSite: http.SameSiteLaxMode,
 	})
 	server.Use(sessions.Sessions("session", store))
 
