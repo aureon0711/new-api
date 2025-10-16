@@ -2,8 +2,8 @@
 
 .calendar-card {
   /* 控制网格紧凑度的CSS变量 */
-  --calendar-cell-size: 72px; /* 增大：默认单元格尺寸 */
-  --calendar-gap: 8px;        /* 增大：默认网格间距 */
+  --calendar-cell-size: 86px; /* 增大：提升默认单元格尺寸以改善可读性 */
+  --calendar-gap: 10px;       /* 增大：提升默认网格间距以改善布局 */
   /* 计算日历区域的视觉最大宽度（7个格子 + 6个间隔）并居中 */
   --calendar-max-width: calc(var(--calendar-cell-size) * 7 + var(--calendar-gap) * 6);
   border-radius: 16px;
@@ -13,8 +13,8 @@
 }
 
 .calendar-card .semi-card-body {
-  padding: 24px;
-  max-width: calc(var(--calendar-max-width) + 16px); /* 略大于网格，容纳左右内边距 */
+  padding: 28px;
+  max-width: calc(var(--calendar-max-width) + 20px); /* 略大于网格，容纳左右内边距 */
   margin: 0 auto; /* 居中显示 */
 }
 
@@ -95,12 +95,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   position: relative;
   background: #f5f7fa;
   transition: all 0.3s ease;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .calendar-day.empty {
@@ -117,16 +118,19 @@
   background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
   color: white;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.4);
   animation: todayPulse 2s ease-in-out infinite;
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 @keyframes todayPulse {
   0%, 100% {
     transform: scale(1);
+    box-shadow: 0 6px 16px rgba(22, 119, 255, 0.4);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(22, 119, 255, 0.6);
   }
 }
 
@@ -134,27 +138,43 @@
   background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
   color: white;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .calendar-day.checked-in.today {
   background: linear-gradient(135deg, #52c41a 0%, #1677ff 100%);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.4);
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  animation: todayCheckedPulse 2s ease-in-out infinite;
+}
+
+@keyframes todayCheckedPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 16px rgba(22, 119, 255, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(82, 196, 26, 0.6);
+  }
 }
 
 .day-number {
-  font-size: 18px; /* 增大数字字体 */
+  font-size: 20px; /* 增大数字字体以提升可读性 */
   line-height: 1;
   z-index: 1;
+  font-weight: 600;
 }
 
 .check-mark {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  font-size: 14px;
+  top: 4px;
+  right: 4px;
+  font-size: 16px; /* 增大勾号标记 */
   font-weight: bold;
   animation: checkmarkAppear 0.3s ease-in-out;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); /* 添加阴影提升对比度 */
 }
 
 @keyframes checkmarkAppear {
@@ -170,36 +190,37 @@
 
 .today-dot {
   position: absolute;
-  bottom: 4px;
-  width: 6px;
-  height: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
   background: white;
   border-radius: 50%;
   animation: dotPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* 添加阴影提升可见性 */
 }
 
 /* 宽屏适配：在较宽的屏幕上进一步增大单元格，提升可读性 */
 @media (min-width: 1440px) {
   .calendar-card {
-    --calendar-cell-size: 80px;
-    --calendar-gap: 10px;
+    --calendar-cell-size: 92px;
+    --calendar-gap: 12px;
   }
-  .day-number { font-size: 20px; }
-  .calendar-title { font-size: 22px; }
+  .day-number { font-size: 22px; }
+  .calendar-title { font-size: 24px; }
 }
 
 /* 平板设备适配 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .calendar-card {
-    --calendar-cell-size: 64px;
-    --calendar-gap: 7px;
+    --calendar-cell-size: 72px;
+    --calendar-gap: 8px;
   }
-  .day-number { font-size: 17px; }
-  .calendar-title { font-size: 19px; }
+  .day-number { font-size: 18px; }
+  .calendar-title { font-size: 20px; }
   .calendar-nav-btn {
-    width: 38px;
-    height: 38px;
-    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    font-size: 26px;
   }
 }
 
@@ -250,51 +271,51 @@
 /* 响应式 */
 @media (max-width: 768px) {
   .calendar-card {
-    --calendar-cell-size: 48px; /* 移动端增大单元格尺寸 */
-    --calendar-gap: 6px;        /* 移动端增大间距 */
+    --calendar-cell-size: 56px; /* 移动端进一步增大单元格尺寸 */
+    --calendar-gap: 8px;        /* 移动端增大间距 */
   }
   
   .calendar-card .semi-card-body {
-    padding: 20px;
+    padding: 24px;
   }
 
   .calendar-header {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
   }
 
   .calendar-title {
-    font-size: 18px;
+    font-size: 19px;
   }
 
   .calendar-nav-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 22px;
+    width: 38px;
+    height: 38px;
+    font-size: 24px;
   }
 
   .calendar-weekday {
-    font-size: 12px;
-    padding: 5px 0;
+    font-size: 13px;
+    padding: 6px 0;
   }
 
   .day-number {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .check-mark {
-    font-size: 12px;
-    top: 2px;
-    right: 2px;
+    font-size: 14px;
+    top: 3px;
+    right: 3px;
   }
 
   .calendar-legend {
-    gap: 12px;
+    gap: 14px;
     flex-wrap: wrap;
   }
 
   .legend-box {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
 }
 

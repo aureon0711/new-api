@@ -18,11 +18,11 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import {
-  IconGithubLogo,
-  IconKey,
-  IconLock,
-  IconMail,
-  IconUser,
+    IconGithubLogo,
+    IconKey,
+    IconLock,
+    IconMail,
+    IconUser,
 } from '@douyinfe/semi-icons';
 import { Button, Card, Checkbox, Divider, Form, Icon, Modal } from '@douyinfe/semi-ui';
 import Text from '@douyinfe/semi-ui/lib/es/typography/text';
@@ -35,17 +35,17 @@ import Turnstile from 'react-turnstile';
 import { StatusContext } from '../../context/Status';
 import { UserContext } from '../../context/User';
 import {
-  API,
-  getLogo,
-  getSystemName,
-  onGitHubOAuthClicked,
-  onLinuxDOOAuthClicked,
-  onOIDCClicked,
-  setUserData,
-  showError,
-  showInfo,
-  showSuccess,
-  updateAPI,
+    API,
+    getLogo,
+    getSystemName,
+    onGitHubOAuthClicked,
+    onLinuxDOOAuthClicked,
+    onOIDCClicked,
+    setUserData,
+    showError,
+    showInfo,
+    showSuccess,
+    updateAPI,
 } from '../../helpers';
 import LinuxDoIcon from '../common/logo/LinuxDoIcon';
 import OIDCIcon from '../common/logo/OIDCIcon';

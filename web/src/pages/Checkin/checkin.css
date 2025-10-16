@@ -456,3 +456,35 @@
     color: #999;
   }
 }
+
+/* 日历组件在签到页面中的布局优化 */
+.checkin-calendar-container {
+  margin: 24px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* 确保日历卡片在签到页面中有合适的间距 */
+.calendar-card {
+  margin: 20px auto;
+  width: 100%;
+  max-width: none; /* 移除最大宽度限制，让内部元素自己控制 */
+}
+
+/* 签到页面响应式布局调整 */
+@media (max-width: 768px) {
+  .checkin-calendar-container {
+    margin: 20px 0;
+  }
+  
+  .calendar-card {
+    margin: 16px auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .checkin-calendar-container {
+    margin: 32px 0;
+  }
+}

@@ -264,7 +264,9 @@ const CheckinPage = () => {
 
         {/* 签到日历 */}
         {checkinData.calendar_enabled && (
-          <CheckinCalendar checkinHistory={checkinHistory} />
+          <div className='checkin-calendar-container'>
+            <CheckinCalendar checkinHistory={checkinHistory} />
+          </div>
         )}
 
         {/* 统计卡片 */}
