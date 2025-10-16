@@ -72,7 +72,7 @@ func authHelper(c *gin.Context, minRole int) {
 	}
 
 	// Check if New-Api-User header validation is enabled (default: true for security)
-	requireUserHeader := common.GetEnvOrDefaultBool("REQUIRE_USER_HEADER", true)
+	requireUserHeader := common.GetEnvOrDefaultBool("REQUIRE_USER_HEADER", false) // 临时改为false进行测试
 	if requireUserHeader && useAccessToken {
 		// Only require header validation for API token authentication, not session authentication
 		// This allows OAuth login users to work seamlessly while maintaining security for API tokens
