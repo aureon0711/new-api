@@ -17,27 +17,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
 import {
-  Avatar,
-  Space,
-  Tag,
-  Tooltip,
-  Typography,
+    Avatar,
+    Space,
+    Tag,
+    Tooltip,
+    Typography,
 } from '@douyinfe/semi-ui';
+import { useEffect, useState } from 'react';
 import {
-  timestamp2string,
-  renderGroup,
-  renderQuota,
-  stringToColor,
-  getLogOther,
-  renderModelTag,
-  renderClaudeLogContent,
-  renderLogContent,
-  renderModelPriceSimple,
-  renderAudioModelPrice,
-  renderClaudeModelPrice,
-  renderModelPrice,
+    API, getLogOther, renderGroup, renderModelPriceSimple, renderModelTag, renderQuota,
+    stringToColor
 } from '../../../helpers';
 
 const colors = [
@@ -57,6 +47,59 @@ const colors = [
   'violet',
   'yellow',
 ];
+
+// 简单的用户组缓存，避免重复请求
+const userGroupCache = {};
+
+function groupColor(name) {
+  if (!name) return 'grey';
+  const key = name.toLowerCase();
+  if (key.includes('vip') || key.includes('pro') || key.includes('plus')) return 'gold';
+  if (key.includes('admin')) return 'purple';
+  if (key.includes('test')) return 'cyan';
+  if (key.includes('default') || key.includes('basic') || key.includes('user')) return 'blue';
+  return 'green';
+}
+
+const UserGroupLabel = ({ userId, initialGroup }) => {
+  const init = initialGroup !== undefined ? initialGroup : userGroupCache[userId];
+  const [group, setGroup] = useState(init ?? null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!userId) return;
+      // 若已有初始组或缓存，则直接使用，不再请求
+      if (initialGroup !== undefined) {
+        userGroupCache[userId] = initialGroup;
+        if (mounted) setGroup(initialGroup);
+        return;
+      }
+      if (userGroupCache[userId] !== undefined) return;
+      try {
+        const res = await API.get(`/api/user/${userId}`);
+        const { success, data } = res.data || {};
+        const g = success ? (data?.group || '') : '';
+        userGroupCache[userId] = g;
+        if (mounted) setGroup(g);
+      } catch (e) {
+        userGroupCache[userId] = '';
+        if (mounted) setGroup('');
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  if (group === null || group === undefined || group === '') return null;
+  return (
+    <Tag color={groupColor(group)} size='small' shape='circle' style={{ lineHeight: 1 }}>
+      {group}
+    </Tag>
+  );
+};
 
 // Render functions
 function renderType(type, t) {
@@ -196,19 +239,41 @@ export const getLogsColumns = ({
       dataIndex: 'username',
       render: (text, record, index) => {
         return isAdminUser ? (
-          <div>
-            <Avatar
-              size='extra-small'
-              color={stringToColor(text)}
-              style={{ marginRight: 4 }}
-              onClick={(event) => {
-                event.stopPropagation();
-                showUserInfoFunc(record.user_id);
-              }}
-            >
-              {typeof text === 'string' && text.slice(0, 1)}
-            </Avatar>
-            {text}
+          <div className='flex flex-col'>
+            {/* 移动端：标签在头像前（左侧），同一行展示 */}
+            <div className='flex items-center md:hidden gap-1'>
+              <UserGroupLabel userId={record.user_id} initialGroup={record.user_group} />
+              <Avatar
+                size='extra-small'
+                color={stringToColor(text)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  showUserInfoFunc(record.user_id);
+                }}
+              >
+                {typeof text === 'string' && text.slice(0, 1)}
+              </Avatar>
+              <span>{text}</span>
+            </div>
+            {/* 桌面端：头像和名称在上，用户组标签在下 */}
+            <div className='hidden md:flex md:flex-col'>
+              <div className='flex items-center gap-1'>
+                <Avatar
+                  size='extra-small'
+                  color={stringToColor(text)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    showUserInfoFunc(record.user_id);
+                  }}
+                >
+                  {typeof text === 'string' && text.slice(0, 1)}
+                </Avatar>
+                <span>{text}</span>
+              </div>
+              <div className='mt-0.5'>
+                <UserGroupLabel userId={record.user_id} initialGroup={record.user_group} />
+              </div>
+            </div>
           </div>
         ) : (
           <></>

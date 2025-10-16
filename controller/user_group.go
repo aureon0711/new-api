@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -136,7 +137,7 @@ func DeleteUserGroup(c *gin.Context) {
 func SearchUserGroups(c *gin.Context) {
 	keyword := c.Query("keyword")
 	pageInfo := common.GetPageQuery(c)
-	
+
 	groups, total, err := model.SearchUserGroups(keyword, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
 	if err != nil {
 		common.ApiError(c, err)
@@ -150,16 +151,41 @@ func SearchUserGroups(c *gin.Context) {
 
 // GetAllEnableGroups 获取所有可用的模型分组（从 Pricing 系统）
 func GetAllEnableGroups(c *gin.Context) {
-	groups, err := model.GetAllEnableGroupsFromPricing()
+	// 1) 来自 Pricing 的启用分组（Ability.Group）
+	pricingGroups, err := model.GetAllEnableGroupsFromPricing()
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
 
+	// 2) 来自“分组与模型倍率设置”的分组（ratio_setting 中的分组名）
+	ratioGroupsMap := ratio_setting.GetGroupRatioCopy()
+
+	// 3) 取并集并去重
+	groupSet := make(map[string]struct{})
+	for g := range ratioGroupsMap {
+		if g == "" {
+			continue
+		}
+		groupSet[g] = struct{}{}
+	}
+	for _, g := range pricingGroups {
+		if g == "" {
+			continue
+		}
+		groupSet[g] = struct{}{}
+	}
+
+	// 4) 转为切片返回（保持稳定输出但无需强制排序）
+	result := make([]string, 0, len(groupSet))
+	for g := range groupSet {
+		result = append(result, g)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    groups,
+		"data":    result,
 	})
 }
 
@@ -195,7 +221,7 @@ func UpdateUserGroupEnableGroups(c *gin.Context) {
 	var requestData struct {
 		EnableGroups []string `json:"enable_groups"`
 	}
-	
+
 	err = json.NewDecoder(c.Request.Body).Decode(&requestData)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

@@ -17,27 +17,25 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Modal } from '@douyinfe/semi-ui';
-import {
-  API,
-  getTodayStartTimestamp,
-  isAdmin,
-  showError,
-  showSuccess,
-  timestamp2string,
-  renderQuota,
-  renderNumber,
-  getLogOther,
-  copy,
-  renderClaudeLogContent,
-  renderLogContent,
-  renderAudioModelPrice,
-  renderClaudeModelPrice,
-  renderModelPrice,
-} from '../../helpers';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ITEMS_PER_PAGE } from '../../constants';
+import {
+    API,
+    copy,
+    getLogOther,
+    getTodayStartTimestamp,
+    isAdmin,
+    renderAudioModelPrice,
+    renderClaudeLogContent,
+    renderClaudeModelPrice,
+    renderLogContent,
+    renderModelPrice,
+    showError,
+    showSuccess,
+    timestamp2string
+} from '../../helpers';
 import { useTableCompactMode } from '../common/useTableCompactMode';
 
 export const useLogsData = () => {
@@ -46,7 +44,7 @@ export const useLogsData = () => {
   // Define column keys for selection
   const COLUMN_KEYS = {
     TIME: 'time',
-    CHANNEL: 'channel',
+    CHANNEL: 'channel', // 渠道列将被隐藏
     USERNAME: 'username',
     TOKEN: 'token',
     GROUP: 'group',
@@ -141,7 +139,8 @@ export const useLogsData = () => {
   const getDefaultColumnVisibility = () => {
     return {
       [COLUMN_KEYS.TIME]: true,
-      [COLUMN_KEYS.CHANNEL]: isAdminUser,
+      // 强制隐藏渠道列
+      [COLUMN_KEYS.CHANNEL]: false,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
       [COLUMN_KEYS.TOKEN]: true,
       [COLUMN_KEYS.GROUP]: true,
@@ -177,13 +176,17 @@ export const useLogsData = () => {
 
     allKeys.forEach((key) => {
       if (
-        (key === COLUMN_KEYS.CHANNEL ||
+        (key === COLUMN_KEYS.CHANNEL || // 渠道列始终不可选
           key === COLUMN_KEYS.USERNAME ||
           key === COLUMN_KEYS.RETRY) &&
         !isAdminUser
       ) {
         updatedColumns[key] = false;
       } else {
+        if (key === COLUMN_KEYS.CHANNEL) {
+          updatedColumns[key] = false;
+          return;
+        }
         updatedColumns[key] = checked;
       }
     });
@@ -239,7 +242,7 @@ export const useLogsData = () => {
     const currentLogType = formLogType !== undefined ? formLogType : logType;
     let localStartTimestamp = Date.parse(start_timestamp) / 1000;
     let localEndTimestamp = Date.parse(end_timestamp) / 1000;
-    let url = `/api/log/self/stat?type=${currentLogType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&group=${group}`;
+  let url = `/api/log/self/stat?type=${currentLogType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&group=${group}`;
     url = encodeURI(url);
     let res = await API.get(url);
     const { success, message, data } = res.data;
@@ -257,14 +260,13 @@ export const useLogsData = () => {
       model_name,
       start_timestamp,
       end_timestamp,
-      channel,
       group,
       logType: formLogType,
     } = getFormValues();
     const currentLogType = formLogType !== undefined ? formLogType : logType;
     let localStartTimestamp = Date.parse(start_timestamp) / 1000;
     let localEndTimestamp = Date.parse(end_timestamp) / 1000;
-    let url = `/api/log/stat?type=${currentLogType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}&group=${group}`;
+  let url = `/api/log/stat?type=${currentLogType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&group=${group}`;
     url = encodeURI(url);
     let res = await API.get(url);
     const { success, message, data } = res.data;
@@ -312,13 +314,7 @@ export const useLogsData = () => {
       logs[i].key = logs[i].id;
       let other = getLogOther(logs[i].other);
       let expandDataLocal = [];
-
-      if (isAdminUser && (logs[i].type === 0 || logs[i].type === 2)) {
-        expandDataLocal.push({
-          key: t('渠道信息'),
-          value: `${logs[i].channel} - ${logs[i].channel_name || '[未知]'}`,
-        });
-      }
+      // 按需隐藏渠道信息，避免在使用日志中展示
       if (other?.ws || other?.audio) {
         expandDataLocal.push({
           key: t('语音输入'),
@@ -492,7 +488,6 @@ export const useLogsData = () => {
       model_name,
       start_timestamp,
       end_timestamp,
-      channel,
       group,
       logType: formLogType,
     } = getFormValues();
@@ -507,7 +502,7 @@ export const useLogsData = () => {
     let localStartTimestamp = Date.parse(start_timestamp) / 1000;
     let localEndTimestamp = Date.parse(end_timestamp) / 1000;
     if (isAdminUser) {
-      url = `/api/log/?p=${startIdx}&page_size=${pageSize}&type=${currentLogType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}&group=${group}`;
+      url = `/api/log/?p=${startIdx}&page_size=${pageSize}&type=${currentLogType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&group=${group}`;
     } else {
       url = `/api/log/self/?p=${startIdx}&page_size=${pageSize}&type=${currentLogType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&group=${group}`;
     }

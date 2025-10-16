@@ -77,10 +77,19 @@ const UserGroupAssignSetting = () => {
     try {
       const res = await API.get('/api/option/');
       if (res.data.success) {
-        const options = res.data.data;
+        // 后端返回的是 [{ key, value }, ...] 的数组，这里需要转换为对象映射
+        const list = Array.isArray(res.data.data) ? res.data.data : [];
+        const options = list.reduce((acc, item) => {
+          const k = item.key ?? item.Key;
+          const v = item.value ?? item.Value;
+          if (k !== undefined) acc[k] = v;
+          return acc;
+        }, {});
+
         const config = {};
-        loginMethods.forEach(method => {
-          config[method.key] = options[method.key] || 'default';
+        loginMethods.forEach((method) => {
+          const val = options[method.key];
+          config[method.key] = val && typeof val === 'string' ? val : 'default';
         });
         formApi?.setValues(config);
       } else {

@@ -17,9 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
-import { Button, Form } from '@douyinfe/semi-ui';
 import { IconSearch } from '@douyinfe/semi-icons';
+import { Button, Form } from '@douyinfe/semi-ui';
 
 import { DATE_RANGE_PRESETS } from '../../../constants/console.constants';
 
@@ -95,14 +94,7 @@ const LogsFilters = ({
 
           {isAdminUser && (
             <>
-              <Form.Input
-                field='channel'
-                prefix={<IconSearch />}
-                placeholder={t('渠道 ID')}
-                showClear
-                pure
-                size='small'
-              />
+              {/* 隐藏渠道ID输入框 */}
               <Form.Input
                 field='username'
                 prefix={<IconSearch />}

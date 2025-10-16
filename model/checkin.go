@@ -28,6 +28,7 @@ type CheckinConfig struct {
 	CheckinCode              string    `json:"checkin_code" gorm:"type:varchar(20)"`            // 当前签到码
 	ConsecutiveRewardEnabled bool      `json:"consecutive_reward_enabled" gorm:"default:false"` // 连续签到奖励开关
 	ConsecutiveRewardQuota   int       `json:"consecutive_reward_quota" gorm:"default:50"`      // 连续签到奖励额度
+	CalendarEnabled          bool      `json:"calendar_enabled" gorm:"default:true"`            // 日历显示开关
 	CreatedAt                time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt                time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
@@ -198,6 +199,7 @@ func GetCheckinConfig() (*CheckinConfig, error) {
 				CheckinCode:              "",
 				ConsecutiveRewardEnabled: false,
 				ConsecutiveRewardQuota:   50,
+				CalendarEnabled:          true,
 			}, nil
 		}
 		return nil, err

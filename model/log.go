@@ -9,7 +9,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
 
@@ -31,12 +30,15 @@ type Log struct {
 	CompletionTokens int    `json:"completion_tokens" gorm:"default:0"`
 	UseTime          int    `json:"use_time" gorm:"default:0"`
 	IsStream         bool   `json:"is_stream"`
-	ChannelId        int    `json:"channel" gorm:"index"`
-	ChannelName      string `json:"channel_name" gorm:"->"`
-	TokenId          int    `json:"token_id" gorm:"default:0;index"`
-	Group            string `json:"group" gorm:"index"`
-	Ip               string `json:"ip" gorm:"index;default:''"`
-	Other            string `json:"other"`
+	// 彻底不返回渠道相关字段
+	ChannelId   int    `json:"-" gorm:"index"`
+	ChannelName string `json:"-" gorm:"->"`
+	TokenId     int    `json:"token_id" gorm:"default:0;index"`
+	Group       string `json:"group" gorm:"index"`
+	Ip          string `json:"ip" gorm:"index;default:''"`
+	Other       string `json:"other"`
+	// 衍生字段：用户组（仅用于响应，不入库）
+	UserGroup string `json:"user_group" gorm:"-"`
 }
 
 const (
@@ -100,13 +102,6 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	logger.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(other)
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if settingMap.RecordIpLog {
-			needRecordIp = true
-		}
-	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -123,12 +118,8 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 		UseTime:          useTimeSeconds,
 		IsStream:         isStream,
 		Group:            group,
-		Ip: func() string {
-			if needRecordIp {
-				return c.ClientIP()
-			}
-			return ""
-		}(),
+		// 强制记录客户端 IP
+		Ip:    c.ClientIP(),
 		Other: otherStr,
 	}
 	err := LOG_DB.Create(log).Error
@@ -159,13 +150,6 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	logger.LogInfo(c, fmt.Sprintf("record consume log: userId=%d, params=%s", userId, common.GetJsonString(params)))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(params.Other)
-	// 判断是否需要记录 IP
-	needRecordIp := false
-	if settingMap, err := GetUserSetting(userId, false); err == nil {
-		if settingMap.RecordIpLog {
-			needRecordIp = true
-		}
-	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -182,12 +166,8 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		UseTime:          params.UseTimeSeconds,
 		IsStream:         params.IsStream,
 		Group:            params.Group,
-		Ip: func() string {
-			if needRecordIp {
-				return c.ClientIP()
-			}
-			return ""
-		}(),
+		// 强制记录客户端 IP
+		Ip:    c.ClientIP(),
 		Other: otherStr,
 	}
 	err := LOG_DB.Create(log).Error
@@ -224,9 +204,7 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	if endTimestamp != 0 {
 		tx = tx.Where("logs.created_at <= ?", endTimestamp)
 	}
-	if channel != 0 {
-		tx = tx.Where("logs.channel_id = ?", channel)
-	}
+	// 渠道字段对外隐藏，不再提供按渠道过滤
 	if group != "" {
 		tx = tx.Where("logs."+logGroupCol+" = ?", group)
 	}
@@ -239,27 +217,33 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		return nil, 0, err
 	}
 
-	channelIds := types.NewSet[int]()
-	for _, log := range logs {
-		if log.ChannelId != 0 {
-			channelIds.Add(log.ChannelId)
+	// 渠道名称填充逻辑已移除，避免外泄渠道信息
+	// 批量填充用户组，避免前端逐条请求
+	if len(logs) > 0 {
+		userIdsMap := make(map[int]struct{})
+		for _, l := range logs {
+			if l.UserId != 0 {
+				userIdsMap[l.UserId] = struct{}{}
+			}
 		}
-	}
-
-	if channelIds.Len() > 0 {
-		var channels []struct {
-			Id   int    `gorm:"column:id"`
-			Name string `gorm:"column:name"`
-		}
-		if err = DB.Table("channels").Select("id, name").Where("id IN ?", channelIds.Items()).Find(&channels).Error; err != nil {
-			return logs, total, err
-		}
-		channelMap := make(map[int]string, len(channels))
-		for _, channel := range channels {
-			channelMap[channel.Id] = channel.Name
-		}
-		for i := range logs {
-			logs[i].ChannelName = channelMap[logs[i].ChannelId]
+		if len(userIdsMap) > 0 {
+			ids := make([]int, 0, len(userIdsMap))
+			for id := range userIdsMap {
+				ids = append(ids, id)
+			}
+			var users []struct {
+				Id    int    `gorm:"column:id"`
+				Group string `gorm:"column:group"`
+			}
+			if err2 := DB.Table("users").Select("id, `group`").Where("id IN ?", ids).Find(&users).Error; err2 == nil {
+				gmap := make(map[int]string, len(users))
+				for _, u := range users {
+					gmap[u.Id] = u.Group
+				}
+				for i := range logs {
+					logs[i].UserGroup = gmap[logs[i].UserId]
+				}
+			}
 		}
 	}
 
@@ -299,6 +283,17 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	}
 
 	formatUserLogs(logs)
+	// 填充当前用户的用户组
+	if len(logs) > 0 {
+		var u struct {
+			Group string `gorm:"column:group"`
+		}
+		if err2 := DB.Table("users").Select("`group`").Where("id = ?", userId).Take(&u).Error; err2 == nil {
+			for i := range logs {
+				logs[i].UserGroup = u.Group
+			}
+		}
+	}
 	return logs, total, err
 }
 
@@ -343,10 +338,7 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 		tx = tx.Where("model_name like ?", modelName)
 		rpmTpmQuery = rpmTpmQuery.Where("model_name like ?", modelName)
 	}
-	if channel != 0 {
-		tx = tx.Where("channel_id = ?", channel)
-		rpmTpmQuery = rpmTpmQuery.Where("channel_id = ?", channel)
-	}
+	// 渠道字段对外隐藏，不支持按渠道过滤
 	if group != "" {
 		tx = tx.Where(logGroupCol+" = ?", group)
 		rpmTpmQuery = rpmTpmQuery.Where(logGroupCol+" = ?", group)

@@ -115,6 +115,7 @@ func GetCheckinStatus(c *gin.Context) {
 		"config": gin.H{
 			"enabled":              config.Enabled,
 			"checkin_code_enabled": config.CheckinCodeEnabled,
+			"calendar_enabled":     config.CalendarEnabled,
 		},
 	}
 
@@ -240,6 +241,7 @@ type UpdateCheckinConfigRequest struct {
 	CheckinCode              string `json:"checkin_code"`
 	ConsecutiveRewardEnabled bool   `json:"consecutive_reward_enabled"`
 	ConsecutiveRewardQuota   int    `json:"consecutive_reward_quota"`
+	CalendarEnabled          bool   `json:"calendar_enabled"`
 }
 
 func UpdateCheckinConfig(c *gin.Context) {
@@ -303,6 +305,7 @@ func UpdateCheckinConfig(c *gin.Context) {
 	config.CheckinCode = req.CheckinCode
 	config.ConsecutiveRewardEnabled = req.ConsecutiveRewardEnabled
 	config.ConsecutiveRewardQuota = req.ConsecutiveRewardQuota
+	config.CalendarEnabled = req.CalendarEnabled
 
 	// 保存配置
 	if err := model.UpdateCheckinConfig(config); err != nil {

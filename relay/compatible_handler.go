@@ -363,6 +363,12 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 		logContent += fmt.Sprintf("（可能是上游超时）")
 		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, "+
 			"tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, modelName, relayInfo.FinalPreConsumedQuota))
+	} else if completionTokens == 0 && !common.ChargeForEmptyOutputEnabled {
+		// 如果输出为空且未启用空输出计费，则不计费
+		quota = 0
+		logContent += fmt.Sprintf("（输出为空，未计费）")
+		logger.LogInfo(ctx, fmt.Sprintf("completion tokens is 0, skip charging, userId %d, channelId %d, "+
+			"tokenId %d, model %s", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, modelName))
 	} else {
 		if !ratio.IsZero() && quota == 0 {
 			quota = 1

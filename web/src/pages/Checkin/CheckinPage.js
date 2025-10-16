@@ -17,11 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import { Button, Card, Empty, Input, Modal, Pagination, Typography } from '@douyinfe/semi-ui';
+import { Button, Card, Empty, Input, Modal, Pagination, Typography, Spin } from '@douyinfe/semi-ui';
+import { IconCalendar, IconGift, IconTrophy, IconCheckCircle, IconClock } from '@douyinfe/semi-icons';
 import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
 import { API, renderQuota, showError, showSuccess } from '../../helpers';
+import CheckinCalendar from './CheckinCalendar';
+import './checkin.css';
 
 const { Title, Text } = Typography;
 
@@ -34,6 +37,7 @@ const CheckinPage = () => {
   const [checkinHistory, setCheckinHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   
   // 签到码相关状态
   const [showCodeModal, setShowCodeModal] = useState(false);
@@ -48,22 +52,17 @@ const CheckinPage = () => {
   // 获取签到汇总信息
   const getCheckinSummary = async () => {
     try {
-      // 使用后端提供的 /api/checkin/status 接口，并适配前端字段
       const res = await API.get('/api/checkin/status');
       const { success, message, data } = res.data;
       if (success) {
         const mapped = {
-          // 是否开启由后端配置决定
           enabled: data?.config?.enabled ?? false,
-          // 今日是否已签到
           checked_today: data?.has_checked_in ?? false,
-          // 连续天数与本月次数、累计额度
           consecutive_days: data?.stat?.consecutive_days ?? 0,
           month_count: data?.stat?.this_month_checkins ?? 0,
           total_quota: data?.stat?.total_quota ?? 0,
-          // 是否启用签到码
           code_enabled: data?.config?.checkin_code_enabled ?? false,
-          // 今日签到详情（若有）
+          calendar_enabled: data?.config?.calendar_enabled ?? true,
           today_checkin: data?.today_checkin || null,
         };
         setCheckinData(mapped);
@@ -79,7 +78,6 @@ const CheckinPage = () => {
   const getCheckinHistory = async (page = 1, size = 10) => {
     setHistoryLoading(true);
     try {
-      // 调整为后端实际路由与分页参数名
       const res = await API.get(`/api/checkin/history?page=${page}&page_size=${size}`);
       const { success, message, data } = res.data;
       if (success) {
@@ -100,11 +98,13 @@ const CheckinPage = () => {
   const doCheckin = async () => {
     setCheckinLoading(true);
     try {
-      // 后端需要 JSON 体进行绑定，即使不使用签到码也需传空对象
       const res = await API.post('/api/checkin/', {});
       const { success, message, data } = res.data;
       if (success) {
         showSuccess(t('签到成功！获得 $') + renderQuota(data.quota));
+        setShowSuccessAnimation(true);
+        setTimeout(() => setShowSuccessAnimation(false), 2000);
+        
         // 刷新用户信息
         if (userState.user) {
           const updatedUser = {
@@ -134,7 +134,6 @@ const CheckinPage = () => {
     }
     setCodeSubmitting(true);
     try {
-      // 使用与普通签到相同的接口，传递 checkin_code 字段
       const res = await API.post('/api/checkin/', {
         checkin_code: checkinCode.trim(),
       });
@@ -143,6 +142,9 @@ const CheckinPage = () => {
         showSuccess(t('签到成功！获得 $') + renderQuota(data.quota));
         setShowCodeModal(false);
         setCheckinCode('');
+        setShowSuccessAnimation(true);
+        setTimeout(() => setShowSuccessAnimation(false), 2000);
+        
         // 刷新用户信息
         if (userState.user) {
           const updatedUser = {
@@ -191,121 +193,213 @@ const CheckinPage = () => {
     );
   }
 
+  if (!checkinData) {
+    return (
+      <div className='w-full max-w-7xl mx-auto relative min-h-screen lg:min-h-0 mt-[60px] px-2 flex items-center justify-center'>
+        <Spin size='large' />
+      </div>
+    );
+  }
+
   return (
-    <div className='w-full max-w-7xl mx-auto relative min-h-screen lg:min-h-0 mt-[60px] px-2'>
+    <div className='w-full max-w-7xl mx-auto relative min-h-screen lg:min-h-0 mt-[60px] px-2 pb-8'>
+      {/* 成功动画 */}
+      {showSuccessAnimation && (
+        <div className='checkin-success-animation'>
+          <div className='success-icon'>🎉</div>
+          <div className='success-text'>{t('签到成功')}</div>
+        </div>
+      )}
+
       <div className='space-y-6'>
-        {/* 签到汇总区域 */}
-        <Card>
-          <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4'>
-            <div className='flex-1'>
-              <Title heading={3}>{t('签到汇总')}</Title>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mt-4'>
-                <div className='text-center p-4 bg-blue-50 rounded-lg'>
-                  <Text type='secondary'>{t('本月签到次数')}</Text>
-                  <div className='text-2xl font-bold text-blue-600 mt-2'>
-                    {checkinData?.month_count || 0}
-                  </div>
-                </div>
-                <div className='text-center p-4 bg-green-50 rounded-lg'>
-                  <Text type='secondary'>{t('连续签到天数')}</Text>
-                  <div className='text-2xl font-bold text-green-600 mt-2'>
-                    {checkinData?.consecutive_days || 0}
-                  </div>
-                </div>
-                <div className='text-center p-4 bg-purple-50 rounded-lg'>
-                  <Text type='secondary'>{t('累计获得额度')}</Text>
-                  <div className='text-2xl font-bold text-purple-600 mt-2'>
-                    ${renderQuota(checkinData?.total_quota || 0)}
-                  </div>
-                </div>
+        {/* 顶部横幅卡片 */}
+        <Card className='checkin-banner-card'>
+          <div className='flex flex-col lg:flex-row justify-between items-center gap-6'>
+            {/* 左侧：欢迎信息 */}
+            <div className='flex-1 text-center lg:text-left'>
+              <Title heading={2} className='mb-2' style={{ color: 'white' }}>
+                {t('每日签到')}
+              </Title>
+              <Text type='secondary' style={{ color: 'rgba(255,255,255,0.9)' }}>
+                {checkinData.checked_today ? t('今日已完成签到，明天继续加油！') : t('每日签到，积少成多！')}
+              </Text>
+              <div className='mt-3'>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>
+                  {t('连续签到')} <strong style={{ fontSize: '18px', color: '#FFD700' }}>{checkinData.consecutive_days}</strong> {t('天')}
+                </Text>
               </div>
             </div>
-            
-            {/* 签到按钮区域 */}
-            <div className='flex flex-col items-end gap-2'>
+
+            {/* 右侧：签到按钮 */}
+            <div className='flex flex-col items-center gap-3'>
               <Button
                 type='primary'
                 size='large'
+                theme='solid'
                 loading={checkinLoading}
-                disabled={checkinData?.checked_today}
+                disabled={checkinData.checked_today}
                 onClick={() => {
-                  if (checkinData?.code_enabled) {
+                  if (checkinData.code_enabled) {
                     setShowCodeModal(true);
                   } else {
                     doCheckin();
                   }
                 }}
-                className='min-w-[120px]'
+                className='checkin-button'
+                icon={checkinData.checked_today ? <IconCheckCircle /> : <IconCalendar />}
               >
-                {checkinData?.checked_today ? t('今日已签到') : t('签到')}
+                {checkinData.checked_today ? t('今日已签到') : t('立即签到')}
               </Button>
+              {checkinData.checked_today && checkinData.today_checkin && (
+                <div className='today-reward'>
+                  <IconGift style={{ color: '#52c41a' }} />
+                  <Text type='success' strong>
+                    {t('今日获得')} ${renderQuota(checkinData.today_checkin.quota)}
+                  </Text>
+                </div>
+              )}
             </div>
           </div>
         </Card>
 
-        {/* 签到历史区域 */}
-        <Card>
-          <Title heading={4}>{t('签到历史')}</Title>
-          <div className='mt-4'>
-            {checkinHistory.length === 0 ? (
-              <Empty
-                image='https://lf9-static.semi.design/obj/semi-tos-ops/image/empty.png'
-                title={t('暂无签到记录')}
-                description={t('开始签到获取奖励吧')}
-              />
-            ) : (
-              <>
-                <div className='overflow-x-auto'>
-                  <table className='w-full'>
-                    <thead>
-                      <tr className='border-b'>
-                        <th className='text-left py-3 px-4'>{t('签到时间')}</th>
-                        <th className='text-left py-3 px-4'>{t('获得额度')}</th>
-                        <th className='text-left py-3 px-4'>{t('签到方式')}</th>
-                        <th className='text-left py-3 px-4'>{t('连续天数')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {checkinHistory.map((record, index) => (
-                        <tr key={record.id || index} className='border-b hover:bg-gray-50'>
-                          <td className='py-3 px-4'>
-                            {new Date(record.created_at).toLocaleString()}
-                          </td>
-                          <td className='py-3 px-4 text-green-600 font-semibold'>
-                            ${renderQuota(record.quota)}
-                          </td>
-                          <td className='py-3 px-4'>
-                            {record.checkin_code ? t('签到码') : t('普通签到')}
-                          </td>
-                          <td className='py-3 px-4'>
-                            {record.consecutive_days || 1} {t('天')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                
-                {/* 分页 */}
-                {total > pageSize && (
-                  <div className='flex justify-center mt-6'>
-                    <Pagination
-                      current={currentPage}
-                      pageSize={pageSize}
-                      total={total}
-                      onChange={handlePageChange}
-                      showSizeChanger
-                      pageSizeOpts={[10, 20, 50]}
-                      onPageSizeChange={(size) => {
-                        setPageSize(size);
-                        getCheckinHistory(1, size);
-                      }}
-                    />
-                  </div>
-                )}
-              </>
-            )}
+        {/* 签到日历 */}
+        {checkinData.calendar_enabled && (
+          <CheckinCalendar checkinHistory={checkinHistory} />
+        )}
+
+        {/* 统计卡片 */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+          <Card className='stat-card stat-card-blue'>
+            <div className='stat-card-content'>
+              <div className='stat-icon'>
+                <IconCalendar size='extra-large' />
+              </div>
+              <div className='stat-info'>
+                <Text type='secondary' className='stat-label'>{t('本月签到')}</Text>
+                <div className='stat-value'>{checkinData.month_count}</div>
+                <Text type='tertiary' size='small'>{t('次')}</Text>
+              </div>
+            </div>
+            <div className='stat-progress'>
+              <div className='stat-progress-bar' style={{ width: `${(checkinData.month_count / 30) * 100}%` }}></div>
+            </div>
+          </Card>
+
+          <Card className='stat-card stat-card-green'>
+            <div className='stat-card-content'>
+              <div className='stat-icon'>
+                <IconTrophy size='extra-large' />
+              </div>
+              <div className='stat-info'>
+                <Text type='secondary' className='stat-label'>{t('连续签到')}</Text>
+                <div className='stat-value'>{checkinData.consecutive_days}</div>
+                <Text type='tertiary' size='small'>{t('天')}</Text>
+              </div>
+            </div>
+            <div className='stat-progress'>
+              <div className='stat-progress-bar' style={{ width: `${Math.min((checkinData.consecutive_days / 30) * 100, 100)}%` }}></div>
+            </div>
+          </Card>
+
+          <Card className='stat-card stat-card-purple'>
+            <div className='stat-card-content'>
+              <div className='stat-icon'>
+                <IconGift size='extra-large' />
+              </div>
+              <div className='stat-info'>
+                <Text type='secondary' className='stat-label'>{t('累计奖励')}</Text>
+                <div className='stat-value'>${renderQuota(checkinData.total_quota)}</div>
+                <Text type='tertiary' size='small'>{t('美元')}</Text>
+              </div>
+            </div>
+            <div className='stat-progress'>
+              <div className='stat-progress-bar' style={{ width: '100%' }}></div>
+            </div>
+          </Card>
+        </div>
+
+        {/* 签到历史 */}
+        <Card className='history-card'>
+          <div className='flex items-center justify-between mb-4'>
+            <div className='flex items-center gap-2'>
+              <IconClock size='large' />
+              <Title heading={4} className='mb-0'>{t('签到历史')}</Title>
+            </div>
           </div>
+          
+          {historyLoading ? (
+            <div className='text-center py-8'>
+              <Spin size='large' />
+            </div>
+          ) : checkinHistory.length === 0 ? (
+            <Empty
+              image='https://lf9-static.semi.design/obj/semi-tos-ops/image/empty.png'
+              title={t('暂无签到记录')}
+              description={t('开始签到获取奖励吧')}
+            />
+          ) : (
+            <>
+              <div className='history-list'>
+                {checkinHistory.map((record, index) => (
+                  <div key={record.id || index} className='history-item'>
+                    <div className='history-item-left'>
+                      <div className='history-date-badge'>
+                        <span className='history-day'>
+                          {new Date(record.created_at).getDate()}
+                        </span>
+                        <span className='history-month'>
+                          {new Date(record.created_at).toLocaleDateString('zh-CN', { month: 'short' })}
+                        </span>
+                      </div>
+                      <div className='history-info'>
+                        <div className='history-time'>
+                          {new Date(record.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className='history-method'>
+                          {record.checkin_code ? (
+                            <span className='method-badge code-badge'>
+                              <IconGift size='small' /> {t('签到码')}
+                            </span>
+                          ) : (
+                            <span className='method-badge normal-badge'>
+                              <IconCalendar size='small' /> {t('普通签到')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className='history-item-right'>
+                      <div className='history-reward'>
+                        <span className='reward-amount'>${renderQuota(record.quota)}</span>
+                      </div>
+                      <div className='history-streak'>
+                        <IconTrophy size='small' style={{ color: '#faad14' }} />
+                        <span>{record.consecutive_days || 1} {t('天')}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* 分页 */}
+              {total > pageSize && (
+                <div className='flex justify-center mt-6'>
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={total}
+                    onChange={handlePageChange}
+                    showSizeChanger
+                    pageSizeOpts={[10, 20, 50]}
+                    onPageSizeChange={(size) => {
+                      setPageSize(size);
+                      getCheckinHistory(1, size);
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </Card>
       </div>
 
@@ -345,6 +439,7 @@ const CheckinPage = () => {
             onChange={setCheckinCode}
             placeholder={t('请输入签到码')}
             onPressEnter={useCheckinCode}
+            size='large'
           />
         </div>
       </Modal>
@@ -353,3 +448,4 @@ const CheckinPage = () => {
 };
 
 export default CheckinPage;
+                        

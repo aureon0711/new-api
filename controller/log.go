@@ -18,9 +18,8 @@ func GetAllLogs(c *gin.Context) {
 	username := c.Query("username")
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
-	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	logs, total, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), channel, group)
+	logs, total, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), 0, group)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -28,7 +27,6 @@ func GetAllLogs(c *gin.Context) {
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(logs)
 	common.ApiSuccess(c, pageInfo)
-	return
 }
 
 func GetUserLogs(c *gin.Context) {
@@ -48,7 +46,6 @@ func GetUserLogs(c *gin.Context) {
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(logs)
 	common.ApiSuccess(c, pageInfo)
-	return
 }
 
 func SearchAllLogs(c *gin.Context) {
@@ -56,7 +53,6 @@ func SearchAllLogs(c *gin.Context) {
 	logs, err := model.SearchAllLogs(keyword)
 	if err != nil {
 		common.ApiError(c, err)
-		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -72,7 +68,6 @@ func SearchUserLogs(c *gin.Context) {
 	logs, err := model.SearchUserLogs(userId, keyword)
 	if err != nil {
 		common.ApiError(c, err)
-		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -106,9 +101,8 @@ func GetLogsStat(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	username := c.Query("username")
 	modelName := c.Query("model_name")
-	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	stat := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
+	stat := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, 0, group)
 	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, "")
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -119,7 +113,6 @@ func GetLogsStat(c *gin.Context) {
 			"tpm":   stat.Tpm,
 		},
 	})
-	return
 }
 
 func GetLogsSelfStat(c *gin.Context) {
@@ -129,9 +122,8 @@ func GetLogsSelfStat(c *gin.Context) {
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
-	channel, _ := strconv.Atoi(c.Query("channel"))
 	group := c.Query("group")
-	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
+	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, 0, group)
 	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, tokenName)
 	c.JSON(200, gin.H{
 		"success": true,
@@ -143,7 +135,6 @@ func GetLogsSelfStat(c *gin.Context) {
 			//"token": tokenNum,
 		},
 	})
-	return
 }
 
 func DeleteHistoryLogs(c *gin.Context) {
@@ -153,7 +144,6 @@ func DeleteHistoryLogs(c *gin.Context) {
 			"success": false,
 			"message": "target timestamp is required",
 		})
-		return
 	}
 	count, err := model.DeleteOldLog(c.Request.Context(), targetTimestamp, 100)
 	if err != nil {

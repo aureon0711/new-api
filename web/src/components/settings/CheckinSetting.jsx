@@ -46,6 +46,7 @@ const CheckinSetting = () => {
     checkin_code: '',
     consecutive_reward_enabled: false,
     consecutive_reward_quota: 0.01,
+    calendar_enabled: true,
   });
 
   const getConfig = async () => {
@@ -62,6 +63,7 @@ const CheckinSetting = () => {
           checkin_code: data?.checkin_code ?? '',
           consecutive_reward_enabled: data?.consecutive_reward_enabled ?? false,
           consecutive_reward_quota: data?.consecutive_reward_quota ?? 0.01,
+          calendar_enabled: data?.calendar_enabled ?? true,
         });
       } else {
         showError(message);
@@ -99,6 +101,7 @@ const CheckinSetting = () => {
         checkin_code: formData.checkin_code || '',
         consecutive_reward_enabled: formData.consecutive_reward_enabled,
         consecutive_reward_quota: Number(formData.consecutive_reward_quota) || 0,
+        calendar_enabled: formData.calendar_enabled,
       };
       const res = await API.put('/api/checkin/config', payload);
       const { success, message } = res.data;
@@ -140,6 +143,23 @@ const CheckinSetting = () => {
             <Switch
               checked={formData.enabled}
               onChange={(checked) => handleSwitchChange('enabled', checked)}
+            />
+          </div>
+
+          <Divider />
+
+          <div className='flex justify-between items-center'>
+            <div>
+              <Text strong>{t('显示签到日历')}</Text>
+              <br />
+              <Text type='secondary' size='small'>
+                {t('开启后用户可以在签到页面看到签到日历')}
+              </Text>
+            </div>
+            <Switch
+              checked={formData.calendar_enabled}
+              onChange={(checked) => handleSwitchChange('calendar_enabled', checked)}
+              disabled={!formData.enabled}
             />
           </div>
 
