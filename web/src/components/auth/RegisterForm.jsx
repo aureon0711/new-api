@@ -95,7 +95,9 @@ const RegisterForm = () => {
   }
 
   // 使用全局 StatusContext，避免需要刷新注册页才能看到新启用的 OAuth 方式
-  const [status] = useContext(StatusContext);
+  // 注意：StatusContext 提供的是形如 [state, dispatch] 的元组，其中实际数据在 state.status 下
+  const [statusState] = useContext(StatusContext);
+  const status = statusState?.status || {};
 
   const [showEmailVerification, setShowEmailVerification] = useState(() => {
     return status.email_verification ?? false;
@@ -111,7 +113,7 @@ const RegisterForm = () => {
     // 从 status 获取用户协议和隐私政策的启用状态
     setHasUserAgreement(status.user_agreement_enabled || false);
     setHasPrivacyPolicy(status.privacy_policy_enabled || false);
-  }, [status]);
+  }, [statusState]);
 
   useEffect(() => {
     let countdownInterval = null;

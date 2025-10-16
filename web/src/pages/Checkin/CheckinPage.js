@@ -221,7 +221,7 @@ const CheckinPage = () => {
                 {t('每日签到')}
               </Title>
               <Text type='secondary' style={{ color: 'rgba(255,255,255,0.9)' }}>
-                {checkinData.checked_today ? t('今日已完成签到，明天继续加油！') : t('每日签到，积少成多！')}
+                {checkinData.checked_today ? t('今日已完成签到') : t('哈基米~')}
               </Text>
               <div className='mt-3'>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>
