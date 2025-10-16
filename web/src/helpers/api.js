@@ -17,14 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import {
-  getUserIdFromLocalStorage,
-  showError,
-  formatMessageForAPI,
-  isValidMessage,
-} from './utils';
 import axios from 'axios';
 import { MESSAGE_ROLES } from '../constants/playground.constants';
+import {
+  formatMessageForAPI,
+  getUserIdFromLocalStorage,
+  isValidMessage,
+  showError,
+} from './utils';
 
 export let API = axios.create({
   baseURL: import.meta.env.VITE_REACT_APP_SERVER_URL
@@ -266,10 +266,15 @@ export async function onLinuxDOOAuthClicked(linuxdo_client_id) {
 export async function onDiscordOAuthClicked(discord_client_id) {
   const state = await getOAuthState();
   if (!state) return;
-  const redirectUri = encodeURIComponent(`${window.location.origin}/oauth/discord`);
-  window.open(
-    `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${discord_client_id}&state=${state}&scope=identify%20email&redirect_uri=${redirectUri}`,
-  );
+  const redirectUri = `${window.location.origin}/oauth/discord`;
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: discord_client_id,
+    state: state,
+    scope: 'identify email',
+    redirect_uri: redirectUri,
+  });
+  window.open(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
 }
 
 let channelModels = undefined;

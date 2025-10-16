@@ -1,12 +1,13 @@
 package controller
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -41,20 +42,15 @@ func getDiscordUserInfoByCode(code string) (*DiscordUser, error) {
 	}
 
 	// 交换授权码获取访问令牌
-	values := map[string]string{
-		"client_id":     common.DiscordClientId,
-		"client_secret": common.DiscordClientSecret,
-		"code":          code,
-		"grant_type":    "authorization_code",
-		"redirect_uri":  system_setting.ServerAddress + "/oauth/discord",
-	}
+	// Discord token端点只接受 application/x-www-form-urlencoded 格式
+	values := url.Values{}
+	values.Set("client_id", common.DiscordClientId)
+	values.Set("client_secret", common.DiscordClientSecret)
+	values.Set("code", code)
+	values.Set("grant_type", "authorization_code")
+	values.Set("redirect_uri", system_setting.ServerAddress+"/oauth/discord")
 
-	jsonData, err := json.Marshal(values)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", "https://discord.com/api/v10/oauth2/token", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", "https://discord.com/api/v10/oauth2/token", strings.NewReader(values.Encode()))
 	if err != nil {
 		return nil, err
 	}
