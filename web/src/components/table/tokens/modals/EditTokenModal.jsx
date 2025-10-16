@@ -126,7 +126,8 @@ const EditTokenModal = (props) => {
   };
 
   const loadGroups = async () => {
-    let res = await API.get(`/api/user/self/groups`);
+    // 使用新的API获取用户组的可选模型分组
+    let res = await API.get(`/api/user/self/user_group_enable_groups`);
     const { success, message, data } = res.data;
     if (success) {
       let localGroupOptions = Object.entries(data).map(([group, info]) => ({

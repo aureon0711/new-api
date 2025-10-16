@@ -14,6 +14,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/QuantumNous/new-api/constant"
 
@@ -601,6 +602,89 @@ func GetUserModels(c *gin.Context) {
 		"data":    models,
 	})
 	return
+}
+
+// GetUserGroupEnableGroupsForToken 获取用户所属用户组的可选模型分组（供令牌使用）
+func GetUserGroupEnableGroupsForToken(c *gin.Context) {
+	userId := c.GetInt("id")
+	
+	// 获取用户信息
+	user, err := model.GetUserById(userId, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取用户信息失败",
+		})
+		return
+	}
+
+	// 根据用户的分组名称查找对应的用户组ID
+	userGroup, err := model.GetUserGroupByName(user.Group)
+	if err != nil {
+		// 如果找不到对应的用户组配置，使用旧的逻辑（兼容性处理）
+		groups := setting.GetUserUsableGroups(user.Group)
+		groupsWithInfo := make(map[string]map[string]interface{})
+		for groupName, desc := range groups {
+			if ratio, ok := ratio_setting.GetGroupRatioCopy()[groupName]; ok {
+				groupsWithInfo[groupName] = map[string]interface{}{
+					"ratio": ratio,
+					"desc":  desc,
+				}
+			}
+		}
+		
+		// 添加auto分组支持
+		if setting.GroupInUserUsableGroups("auto") {
+			groupsWithInfo["auto"] = map[string]interface{}{
+				"ratio": "自动",
+				"desc":  setting.GetUsableGroupDescription("auto"),
+			}
+		}
+		
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "",
+			"data":    groupsWithInfo,
+		})
+		return
+	}
+
+	// 获取用户组的可选模型分组
+	enableGroups, err := model.GetUserGroupEnableGroups(userGroup.Id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取用户组权限失败",
+		})
+		return
+	}
+
+	// 构建返回数据，包含ratio和描述信息
+	groupsWithInfo := make(map[string]map[string]interface{})
+	groupRatios := ratio_setting.GetGroupRatioCopy()
+	
+	for _, groupName := range enableGroups {
+		if ratio, ok := groupRatios[groupName]; ok {
+			groupsWithInfo[groupName] = map[string]interface{}{
+				"ratio": ratio,
+				"desc":  setting.GetUsableGroupDescription(groupName),
+			}
+		}
+	}
+
+	// 如果配置了auto分组，也添加进去
+	if setting.GroupInUserUsableGroups("auto") && common.StringsContains(enableGroups, "auto") {
+		groupsWithInfo["auto"] = map[string]interface{}{
+			"ratio": "自动",
+			"desc":  setting.GetUsableGroupDescription("auto"),
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    groupsWithInfo,
+	})
 }
 
 func UpdateUser(c *gin.Context) {
