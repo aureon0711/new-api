@@ -18,27 +18,27 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import {
-  Banner,
-  Button,
-  Card,
-  Col,
-  Form,
-  Modal,
-  Radio,
-  Row,
-  Spin,
-  TagInput,
-  Typography
+    Banner,
+    Button,
+    Card,
+    Col,
+    Form,
+    Modal,
+    Radio,
+    Row,
+    Spin,
+    TagInput,
+    Typography
 } from '@douyinfe/semi-ui';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  API,
-  removeTrailingSlash,
-  showError,
-  showSuccess,
-  toBoolean,
+    API,
+    removeTrailingSlash,
+    showError,
+    showSuccess,
+    toBoolean,
 } from '../../helpers';
 const { Text } = Typography;
 
