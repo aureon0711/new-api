@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 
 	"github.com/gin-gonic/gin"
@@ -102,6 +103,27 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	logger.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(other)
+	// ---- Fallback 填充逻辑 ----
+	if modelName == "" {
+		// 优先 original_model，其次请求体解析（上层已做），最后占位 unknown
+		if m := c.GetString("original_model"); m != "" {
+			modelName = m
+		} else {
+			modelName = "unknown"
+		}
+	}
+	if group == "" {
+		// 使用 UsingGroup > TokenGroup > context "group" > 占位 unknown
+		if g := common.GetContextKeyString(c, constant.ContextKeyUsingGroup); g != "" {
+			group = g
+		} else if g := common.GetContextKeyString(c, constant.ContextKeyTokenGroup); g != "" {
+			group = g
+		} else if g := c.GetString("group"); g != "" {
+			group = g
+		} else {
+			group = "unknown"
+		}
+	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -150,6 +172,27 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	logger.LogInfo(c, fmt.Sprintf("record consume log: userId=%d, params=%s", userId, common.GetJsonString(params)))
 	username := c.GetString("username")
 	otherStr := common.MapToJsonStr(params.Other)
+	// ---- Fallback 填充逻辑 ----
+	modelName := params.ModelName
+	if modelName == "" {
+		if m := c.GetString("original_model"); m != "" {
+			modelName = m
+		} else {
+			modelName = "unknown"
+		}
+	}
+	group := params.Group
+	if group == "" {
+		if g := common.GetContextKeyString(c, constant.ContextKeyUsingGroup); g != "" {
+			group = g
+		} else if g := common.GetContextKeyString(c, constant.ContextKeyTokenGroup); g != "" {
+			group = g
+		} else if g := c.GetString("group"); g != "" {
+			group = g
+		} else {
+			group = "unknown"
+		}
+	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,
@@ -159,13 +202,13 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		PromptTokens:     params.PromptTokens,
 		CompletionTokens: params.CompletionTokens,
 		TokenName:        params.TokenName,
-		ModelName:        params.ModelName,
+		ModelName:        modelName,
 		Quota:            params.Quota,
 		ChannelId:        params.ChannelId,
 		TokenId:          params.TokenId,
 		UseTime:          params.UseTimeSeconds,
 		IsStream:         params.IsStream,
-		Group:            params.Group,
+		Group:            group,
 		// 强制记录客户端 IP
 		Ip:    c.ClientIP(),
 		Other: otherStr,
