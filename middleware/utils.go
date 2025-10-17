@@ -1,7 +1,11 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -68,6 +72,62 @@ func abortWithOpenAiMessage(c *gin.Context, statusCode int, message string, code
 	logMessage += fmt.Sprintf(" | 错误信息: %s", message)
 	
 	logger.LogError(c.Request.Context(), logMessage)
+
+	// ========== 记录到错误日志表（补充“未知”记录缺失字段）===========
+	if statusCode >= 400 { // 仅对错误状态做记录
+		if _, recorded := c.Get("_error_log_recorded"); !recorded { // 避免重复
+			// 补充 original_model
+			modelName := c.GetString("original_model")
+			if modelName == "" {
+				// 尝试从 body 解析 {"model":"..."}
+				if c.Request != nil && c.Request.Body != nil {
+					var bodyBytes []byte
+					bodyBytes, _ = io.ReadAll(c.Request.Body)
+					if len(bodyBytes) > 0 {
+						// 还原 Body 供后续中间件使用
+						c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+						var bodyMap map[string]interface{}
+						if json.Unmarshal(bodyBytes, &bodyMap) == nil {
+							if m, ok := bodyMap["model"].(string); ok && m != "" {
+								modelName = m
+								c.Set("original_model", modelName)
+							}
+						}
+					}
+				}
+				// GET /v1/realtime?model=xxx 形式
+				if modelName == "" && c.Request != nil && c.Request.Method == http.MethodGet {
+					qModel := c.Query("model")
+					if qModel != "" {
+						modelName = qModel
+						c.Set("original_model", modelName)
+					}
+				}
+			}
+
+			// 补充分组信息
+			userGroup := common.GetContextKeyString(c, constant.ContextKeyUsingGroup)
+			if userGroup == "" {
+				userGroup = common.GetContextKeyString(c, constant.ContextKeyTokenGroup)
+			}
+			if userGroup == "" {
+				userGroup = c.GetString("group")
+			}
+
+			tokenName := c.GetString("token_name")
+			tokenId := c.GetInt("token_id")
+			channelId := c.GetInt("channel_id")
+			other := map[string]interface{}{
+				"status_code": statusCode,
+				"error_code":  codeStr,
+			}
+			if c.Request != nil && c.Request.URL != nil {
+				other["request_path"] = c.Request.URL.Path
+			}
+			model.RecordErrorLog(c, userId, channelId, modelName, tokenName, message, tokenId, 0, false, userGroup, other)
+			c.Set("_error_log_recorded", true)
+		}
+	}
 }
 
 func abortWithMidjourneyMessage(c *gin.Context, statusCode int, code int, description string) {
